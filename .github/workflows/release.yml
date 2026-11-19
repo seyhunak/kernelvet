@@ -1,0 +1,111 @@
+name: Release
+
+# Push a tag such as v0.1.0 to publish that version to PyPI.
+# Run it by hand (Actions → Release → Run workflow) to rehearse on TestPyPI.
+# Publishing uses PyPI trusted publishing (OIDC): no API token is stored here.
+# One-time setup on pypi.org / test.pypi.org is described in CONTRIBUTING.md.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    # lint, tests on 3.11–3.13, then build the sdist and wheel and smoke-test the wheel
+    uses: ./.github/workflows/ci.yml
+
+  check:
+    name: Check the release
+    runs-on: ubuntu-latest
+    needs: [ci]
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Exactly one wheel and one sdist
+        run: |
+          ls -l dist/
+          test "$(ls dist/*.whl | wc -l)" -eq 1
+          test "$(ls dist/*.tar.gz | wc -l)" -eq 1
+      - name: Read the version from the wheel
+        id: version
+        run: |
+          version="$(basename dist/*.whl | cut -d- -f2)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Package version: $version"
+      - name: The tag must match the package version
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::tag $TAG does not match the package version $VERSION (src/kernelvet/__init__.py)"
+            exit 1
+          fi
+
+  testpypi:
+    name: Publish to TestPyPI (rehearsal)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: [check]
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/kernelvet/${{ needs.check.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  pypi:
+    name: Publish to PyPI
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    needs: [check]
+    environment:
+      name: pypi
+      url: https://pypi.org/project/kernelvet/${{ needs.check.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: Create the GitHub release
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    needs: [pypi]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Create the release with the published files attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes --verify-tag

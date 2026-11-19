@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "rocm_version": "10.1.0",
+  "retrieved": "2026-11-18",
+  "sources": {
+    "sysreq": {
+      "title": "ROCm system requirements (Linux)",
+      "url": "https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html",
+      "page_date": "2026-07-15",
+      "describes": "7.14.x"
+    },
+    "matrix": {
+      "title": "ROCm 10.1.0 compatibility matrix",
+      "url": "https://rocm.docs.amd.com/en/latest/compatibility/compatibility-matrix.html",
+      "page_date": "2026-08-26",
+      "describes": "10.1.0"
+    },
+    "releases": {
+      "title": "ROCm release history",
+      "url": "https://rocm.docs.amd.com/en/latest/release/versions.html",
+      "describes": "latest listed release 10.1.0 (2026-10-05)"
+    }
+  },
+  "notes": [
+    "Transcribed by hand from the pages above on the retrieval date. Always confirm against the live AMD documentation before relying on a result.",
+    "The system-requirements page (7.14-era) and the 10.1.0 compatibility matrix disagree on some OS point releases (e.g. Ubuntu 24.04.4 vs 24.04.5). Both are recorded and either source counts as a match.",
+    "Some GPU-to-target mappings in the 10.1.0 matrix (Radeon series rows, Ryzen APUs) were ambiguous in the published table; those targets are listed under targets_uncertain and produce WARNING, never PASS.",
+    "Per AMD: if a GPU is not listed it is not officially supported."
+  ],
+  "release_versions": ["10.1.0", "10.0.0", "7.14.1", "7.14.0"],
+  "gpus": [
+    {"name": "AMD Instinct MI355X", "class": "instinct", "arch": "CDNA4", "gfx": "gfx950", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Instinct MI350X", "class": "instinct", "arch": "CDNA4", "gfx": "gfx950", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Instinct MI325X", "class": "instinct", "arch": "CDNA3", "gfx": "gfx942", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Instinct MI300X", "class": "instinct", "arch": "CDNA3", "gfx": "gfx942", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Instinct MI300A", "class": "instinct", "arch": "CDNA3", "gfx": "gfx942", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Instinct MI250X", "class": "instinct", "arch": "CDNA2", "gfx": "gfx90a", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Instinct MI250", "class": "instinct", "arch": "CDNA2", "gfx": "gfx90a", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Instinct MI210", "class": "instinct", "arch": "CDNA2", "gfx": "gfx90a", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Instinct MI100", "class": "instinct", "arch": "CDNA", "gfx": "gfx908", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Instinct MI50", "class": "instinct", "arch": "GCN5.1", "gfx": "gfx906", "status": "unsupported", "source": "sysreq"},
+    {"name": "AMD Instinct MI25", "class": "instinct", "arch": "GCN5.0", "gfx": "gfx900", "status": "unsupported", "source": "sysreq"},
+    {"name": "AMD Radeon AI PRO R9700", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon AI PRO R9600D", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon PRO V710", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon PRO W7900 Dual Slot", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon PRO W7900", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon PRO W7800 48GB", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon PRO W7800", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon PRO W7700", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon PRO W6800", "class": "radeon", "arch": "RDNA2", "gfx": "gfx1030", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon PRO V620", "class": "radeon", "arch": "RDNA2", "gfx": "gfx1030", "status": "supported", "source": "sysreq", "note": "Ubuntu 24.04.4 and 22.04.5 only"},
+    {"name": "AMD Radeon PRO VII", "class": "radeon", "arch": "GCN5.1", "gfx": "gfx906", "status": "unsupported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 9070 XT", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 9070 GRE", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 9070", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 9060 XT LP", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1200", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 9060 XT", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1200", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 9060", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1200", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 7900 XTX", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 7900 XT", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 7900 GRE", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 7800 XT", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 7700 XT", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon RX 7700", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq"},
+    {"name": "AMD Radeon VII", "class": "radeon", "arch": "GCN5.1", "gfx": "gfx906", "status": "unsupported", "source": "sysreq"}
+  ],
+  "targets_uncertain": {
+    "gfx1102": "10.1.0 matrix lists gfx1102 (Radeon PRO V series / RX 7600); row mapping was ambiguous",
+    "gfx1151": "10.1.0 matrix lists Ryzen APU targets; product mapping was ambiguous",
+    "gfx1150": "10.1.0 matrix lists Ryzen APU targets; product mapping was ambiguous",
+    "gfx1152": "10.1.0 matrix lists Ryzen APU targets; product mapping was ambiguous",
+    "gfx1153": "10.1.0 matrix lists Ryzen APU targets; product mapping was ambiguous",
+    "gfx1103": "10.1.0 matrix lists Ryzen APU targets; product mapping was ambiguous"
+  },
+  "os": {
+    "instinct": [
+      {"id": "ubuntu", "version": "26.04", "label": "Ubuntu 26.04.1", "kernels": ["7.0"], "source": "matrix"},
+      {"id": "ubuntu", "version": "24.04", "label": "Ubuntu 24.04.5 / 24.04.4", "kernels": ["6.8", "6.17"], "source": "matrix+sysreq"},
+      {"id": "ubuntu", "version": "22.04", "label": "Ubuntu 22.04.5", "kernels": ["5.15", "6.8"], "source": "matrix+sysreq"},
+      {"id": "rhel", "version": "10.2", "label": "RHEL 10.2", "kernels": ["6.12"], "source": "matrix"},
+      {"id": "rhel", "version": "10.1", "label": "RHEL 10.1", "kernels": ["6.12"], "source": "sysreq"},
+      {"id": "rhel", "version": "10.0", "label": "RHEL 10.0", "kernels": ["6.12"], "source": "matrix+sysreq"},
+      {"id": "rhel", "version": "9.8", "label": "RHEL 9.8", "kernels": ["5.14"], "source": "matrix"},
+      {"id": "rhel", "version": "9.7", "label": "RHEL 9.7", "kernels": ["5.14"], "source": "sysreq"},
+      {"id": "rhel", "version": "9.6", "label": "RHEL 9.6", "kernels": ["5.14"], "source": "matrix+sysreq"},
+      {"id": "rhel", "version": "9.4", "label": "RHEL 9.4", "kernels": ["5.14"], "source": "matrix+sysreq"},
+      {"id": "rhel", "version": "8.10", "label": "RHEL 8.10", "kernels": ["4.18"], "source": "matrix+sysreq"},
+      {"id": "sles", "version": "16.0", "label": "SLES 16.0", "kernels": ["6.12"], "source": "matrix"},
+      {"id": "sles", "version": "15.7", "label": "SLES 15 SP7", "kernels": ["6.4"], "source": "matrix+sysreq"},
+      {"id": "debian", "version": "13", "label": "Debian 13", "kernels": ["6.12"], "source": "matrix+sysreq"},
+      {"id": "debian", "version": "12", "label": "Debian 12", "kernels": ["6.1"], "source": "matrix+sysreq"},
+      {"id": "rocky", "version": "9", "label": "Rocky Linux 9", "kernels": ["5.14"], "source": "matrix+sysreq"},
+      {"id": "ol", "version": "10", "label": "Oracle Linux 10 (UEK)", "kernels": [], "source": "matrix+sysreq"},
+      {"id": "ol", "version": "9", "label": "Oracle Linux 9 (UEK)", "kernels": [], "source": "matrix+sysreq"},
+      {"id": "ol", "version": "8", "label": "Oracle Linux 8 (UEK)", "kernels": [], "source": "matrix+sysreq"}
+    ],
+    "radeon": [
+      {"id": "ubuntu", "version": "26.04", "label": "Ubuntu 26.04.1", "kernels": ["7.0"], "source": "matrix"},
+      {"id": "ubuntu", "version": "24.04", "label": "Ubuntu 24.04.5 / 24.04.4", "kernels": ["7.0", "6.8", "6.17"], "source": "matrix+sysreq"},
+      {"id": "ubuntu", "version": "22.04", "label": "Ubuntu 22.04.5", "kernels": ["6.8", "5.15"], "source": "matrix+sysreq"},
+      {"id": "rhel", "version": "10.2", "label": "RHEL 10.2", "kernels": ["6.12"], "source": "matrix"},
+      {"id": "rhel", "version": "10.1", "label": "RHEL 10.1", "kernels": ["6.12"], "source": "sysreq"},
+      {"id": "rhel", "version": "9.8", "label": "RHEL 9.8", "kernels": ["5.14"], "source": "matrix"},
+      {"id": "rhel", "version": "9.7", "label": "RHEL 9.7", "kernels": ["5.14"], "source": "sysreq"}
+    ]
+  },
+  "os_gpu_restrictions": [
+    {"os": "debian:13", "gfx": ["gfx950", "gfx942"], "note": "Debian 13: MI355X/MI350X/MI325X/MI300X only", "source": "sysreq"},
+    {"os": "rocky:9", "gfx": ["gfx942"], "note": "Rocky Linux 9: MI300X/MI300A only", "source": "sysreq"},
+    {"os": "rhel:8.10", "gfx": ["gfx942", "gfx90a", "gfx908"], "note": "RHEL 8.10: MI300X/MI300A/MI250X/MI250/MI210/MI100 only", "source": "sysreq"}
+  ],
+  "amdgpu_driver": {
+    "instinct": ["31.60.0", "31.50.0", "31.40.1", "31.40.0", "31.30.0", "31.20.0", "31.10.0", "30.30.3", "30.30.2", "30.30.1", "30.30.0", "30.20.1", "30.20.0", "30.10.2"],
+    "radeon": ["31.60.0", "31.50.0"],
+    "source": "matrix"
+  },
+  "frameworks": {
+    "pytorch": {"versions": ["2.14", "2.13", "2.12"], "source": "matrix"},
+    "jax": {"versions": ["0.11.1", "0.11.0", "0.10.2"], "source": "matrix"},
+    "tensorflow": {"versions": ["2.21", "2.20"], "source": "matrix"}
+  }
+}

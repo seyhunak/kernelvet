@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.21)
+project(partial LANGUAGES CXX CUDA)
+set(CMAKE_CUDA_ARCHITECTURES 80)
+add_executable(partial src/main.hip)
+target_link_libraries(partial PRIVATE CUDA::cudart)

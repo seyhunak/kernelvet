@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # release.yml runs the same checks and reuses the `dist` artifact this builds
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Format, lint, type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Formatting
+        run: ruff format --check src tests
+      - name: Linting
+        run: ruff check src tests
+      - name: Type checking
+        run: mypy src
+
+  test:
+    name: Tests (Python ${{ matrix.python }}, CPU-only)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Unit tests
+        run: pytest tests/unit -q
+      - name: Integration tests (CLI, TUI; real-tool tests skip without ROCm)
+        run: pytest tests/integration -q -rs
+
+  package:
+    name: Build package and smoke-test the install
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install build
+          python -m build
+      - name: Install the wheel into a clean virtualenv
+        run: |
+          python -m venv /tmp/rd
+          /tmp/rd/bin/pip install dist/*.whl
+      # This runner has no AMD GPU. The smoke test fails if anything reports
+      # GPU execution as passed, or if the CUDA source tree gets modified.
+      - name: CLI smoke test
+        run: scripts/smoke_test.sh /tmp/rd/bin/kernelvet
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  gpu:
+    # Optional: runs only when a self-hosted ROCm runner is registered with the
+    # labels below and the repository variable ROCM_RUNNER is set to "true".
+    name: Real hardware (self-hosted AMD GPU)
+    if: ${{ vars.ROCM_RUNNER == 'true' }}
+    runs-on: [self-hosted, linux, rocm]
+    needs: [test]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -e ".[dev]"
+      - name: Real-tool tests (HIPIFY, HIP probe on the GPU)
+        run: .venv/bin/pytest -m "gpu or hipify" -rs
+      - name: Full diagnosis on this machine
+        run: |
+          set +e
+          .venv/bin/kernelvet diagnose --format json --no-history -o diagnosis.json
+          echo "diagnose exit code: $?"
+          .venv/bin/kernelvet diagnose -o diagnosis.html --no-history
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gpu-diagnosis
+          path: diagnosis.*
