@@ -39,8 +39,15 @@ Runs the complete diagnostic on this machine:
    allocation, transfers, a vector-add kernel and result verification. PyTorch tensor ops on the GPU.
 4. **Compatibility** – against the bundled AMD ROCm compatibility snapshot.
 
-The *Evidence* column says how each result was obtained: `detected` (static), `executed`
-(ran on the GPU), `configured` (reference data) or `none` (not performed).
+The *Evidence* column says how each result was obtained:
+
+* **ran on GPU** (`executed`) – KernelVet compiled and ran code on the GPU in this run.
+  Only a PASS with this evidence is verified on AMD hardware.
+* **detected, not run** (`detected`) – read from tools, files or `/sys`; nothing was executed.
+* **inferred from AMD docs** (`configured`) – compared with AMD's published compatibility data;
+  not tested on this hardware.
+* **none** – not performed.
+
 SKIPPED never counts as success.
 
 Select a row to see details and the suggested fix.
@@ -159,9 +166,17 @@ Keys: **r** run · **e** export JSON · **m** export Markdown · **h** export HT
         reset_table(table, "Category", "Check", "Status", "Evidence", "Result")
         self._checks = report.all_checks()
         for i, c in enumerate(self._checks):
-            table.add_row(c.category, c.name, badge(c.status), c.evidence.value, c.summary, key=str(i))
+            table.add_row(c.category, c.name, badge(c.status), c.evidence.label, c.summary, key=str(i))
+        verified = len(report.hardware_verified_checks)
         self.query_one("#dg-status", Static).update(
-            Text(f"Diagnosis from {report.meta.generated_at}: ", style="dim") + badge(report.status)
+            Text(f"Diagnosis from {report.meta.generated_at}: ", style="dim")
+            + badge(report.status)
+            + Text(
+                f"   verified on AMD hardware: {verified} check(s)"
+                if verified
+                else "   verified on AMD hardware: none (all results detected or inferred)",
+                style="green" if verified else "yellow",
+            )
         )
 
     @on(DataTable.RowHighlighted, "#dg-checks")
@@ -172,7 +187,13 @@ Keys: **r** run · **e** export JSON · **m** export Markdown · **h** export HT
         text = Text()
         text.append(f"{c.name} ", style="bold")
         text.append_text(badge(c.status))
-        text.append(f"   [{c.category} · {c.evidence.value}]\n", style="dim")
+        text.append(f"   [{c.category} · {c.evidence.label}]\n", style="dim")
+        text.append(
+            "Verified on AMD hardware: yes (ran on GPU and passed)\n"
+            if c.hardware_verified
+            else "Verified on AMD hardware: no\n",
+            style="green" if c.hardware_verified else "yellow",
+        )
         text.append(c.summary + "\n")
         if c.detail:
             text.append(c.detail + "\n", style="dim")

@@ -71,6 +71,100 @@ def test_matrix_records_provenance() -> None:
     assert all(e.source in M.sources for e in M.gpus)
 
 
+def _bundled_matrix_data() -> dict:
+    path = Path(__file__).parents[2] / "src/kernelvet/compatibility/data/rocm_matrix.json"
+    return json.loads(path.read_text())
+
+
+def test_every_bundled_rule_has_an_exact_reference() -> None:
+    rules = M.rule_refs()
+    assert len(rules) > 50
+    missing = [label for label, refs in rules.items() if not refs]
+    assert not missing, f"rules without a ref: {missing}"
+    for key, r in M.references.items():
+        assert r.source in M.sources, key
+        assert r.url.startswith(M.sources[r.source].url.split("#")[0]), key
+        assert "#" in r.url or r.source == "releases", f"{key}: url should point at a section"
+        assert r.page and r.section and r.detail and r.rocm_version and r.retrieved, key
+        assert r.verification == "verified" or r.note, key
+
+
+def test_rule_source_and_ref_agree() -> None:
+    # Every page a rule names in `source` (where it was transcribed from) is cited by an exact ref.
+    # Refs may add a page that confirms the rule (supported GPUs are also listed in the 10.1.0 matrix).
+    rules = [
+        *M.gpus,
+        *(e for es in M.os.values() for e in es),
+        *M.os_gpu_restrictions,
+        M.amdgpu_driver,
+        *M.frameworks.values(),
+    ]
+    for e in rules:
+        assert set(e.source.split("+")) <= {M.references[k].source for k in e.ref}, e
+
+
+def test_checks_cite_page_section_rocm_version_and_date() -> None:
+    src = validate_gpu(inp(), M).source or ""
+    assert "System requirements (Linux) > Supported GPUs" in src
+    assert "ROCm 7.14.0" in src and "ROCm 10.1.0" in src
+    assert f"retrieved {M.retrieved}" in src
+    assert "#supported-gpus" in src
+    assert "AI ecosystem compatibility" in (
+        validate_pytorch(
+            inp(s=sw(torch=TorchInfo(installed=True, version="2.13.0", hip_version="10.1.25401"))), M
+        ).source
+        or ""
+    )
+
+
+def test_unverified_reference_is_flagged_and_needs_a_note(tmp_path: Path) -> None:
+    from kernelvet.compatibility.matrix import MatrixError
+
+    data = _bundled_matrix_data()
+    data["references"]["matrix-amdgpu"]["verification"] = "unverified"
+    p = tmp_path / "m.json"
+    p.write_text(json.dumps(data))
+    with pytest.raises(MatrixError, match="needs a note"):
+        load_matrix(p)
+    data["references"]["matrix-amdgpu"]["note"] = "page moved"
+    p2 = tmp_path / "m2.json"
+    p2.write_text(json.dumps(data))
+    src = validate_driver(inp(), load_matrix(p2)).source or ""
+    assert "UNVERIFIED" in src
+
+
+def test_undefined_reference_is_rejected(tmp_path: Path) -> None:
+    from kernelvet.compatibility.matrix import MatrixError
+
+    data = _bundled_matrix_data()
+    data["gpus"][0]["ref"] = ["no-such-ref"]
+    p = tmp_path / "m.json"
+    p.write_text(json.dumps(data))
+    with pytest.raises(MatrixError, match="undefined references: no-such-ref"):
+        load_matrix(p)
+
+
+def test_schema_1_matrix_without_references_still_loads(tmp_path: Path) -> None:
+    data = _bundled_matrix_data()
+    data["schema"] = 1
+    for key in ("references", "release_versions_ref", "targets_uncertain_ref"):
+        data.pop(key)
+    for e in [
+        *data["gpus"],
+        *data["os_gpu_restrictions"],
+        data["amdgpu_driver"],
+        *data["frameworks"].values(),
+    ]:
+        e.pop("ref")
+    for entries in data["os"].values():
+        for e in entries:
+            e.pop("ref")
+    p = tmp_path / "m.json"
+    p.write_text(json.dumps(data))
+    m = load_matrix(p)
+    assert validate_gpu(inp(), m).source == m.source_url("sysreq+matrix")
+
+
 @pytest.mark.parametrize(
     "gfx,expected",
     [

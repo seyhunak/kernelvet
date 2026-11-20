@@ -9,9 +9,13 @@ from urllib.parse import quote
 
 from kernelvet import __version__
 from kernelvet.models.migration import Finding
-from kernelvet.models.report import MigrationReport
+from kernelvet.models.report import HIPIFY_DISCLAIMER, MigrationReport
 
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
+EVIDENCE_NOTE = (
+    "Every result is static analysis of source text. Nothing was compiled or run on an AMD GPU to "
+    "produce these results."
+)
 
 
 def findings_to_sarif(
@@ -44,7 +48,12 @@ def findings_to_sarif(
             "level": f.severity.sarif_level,
             "message": {"text": f.message + (f" Suggested: {f.suggestion}" if f.suggestion else "")},
             "locations": [{"physicalLocation": loc}],
-            "properties": {"category": str(f.category), "severity": str(f.severity)},
+            "properties": {
+                "category": str(f.category),
+                "severity": str(f.severity),
+                "evidence": "static-analysis",
+                "hardwareVerified": False,
+            },
         }
         if f.hip_equivalent:
             result["properties"]["hipEquivalent"] = f.hip_equivalent
@@ -59,6 +68,7 @@ def findings_to_sarif(
             }
         },
         "results": results,
+        "properties": {"evidence": EVIDENCE_NOTE, "conversionDisclaimer": HIPIFY_DISCLAIMER},
     }
     if base_uri:
         run["originalUriBaseIds"] = {"SRCROOT": {"uri": base_uri.rstrip("/") + "/"}}

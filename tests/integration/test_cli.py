@@ -115,13 +115,13 @@ def test_diagnose_terminal_and_history(fake_host: HostContext) -> None:
 
 def test_doctor(bare_host: HostContext) -> None:
     r = runner.invoke(app, ["doctor"])
-    assert "Overall Status" in r.stdout and "GPU execution verified: no" in r.stdout
+    assert "Overall Status" in r.stdout and "Verified on AMD hardware: none" in flat(r.stdout)
     assert r.exit_code == 1
 
 
 def test_doctor_healthy(fake_host: HostContext) -> None:
     r = runner.invoke(app, ["doctor"])
-    assert r.exit_code == 0 and "GPU execution verified: yes" in r.stdout
+    assert r.exit_code == 0 and "Verified on AMD hardware (ran on GPU and passed):" in flat(r.stdout)
 
 
 def test_compatibility(fake_host: HostContext) -> None:
@@ -239,6 +239,11 @@ def test_full_migration_workflow(cuda_project: Path, monkeypatch: pytest.MonkeyP
     r = runner.invoke(app, ["migrate", "convert", str(cuda_project), "-o", str(out)])
     assert r.exit_code == 0, r.stderr
     assert (out / ".kernelvet/conversion.json").exists()
+    assert "not guaranteed to produce working HIP code" in flat(r.stdout)
+    assert "not guaranteed" not in r.stderr  # shown once, in the terminal report
+    r = runner.invoke(app, ["migrate", "convert", str(cuda_project), "-o", str(out), "--force", "-f", "json"])
+    assert json.loads(r.stdout)["conversion_disclaimer"].startswith("Automated CUDA-to-HIP conversion")
+    assert "not guaranteed to produce working HIP code" in flat(r.stderr)
     r = runner.invoke(app, ["migrate", "audit", str(out), "-f", "json"])
     assert r.exit_code == 1  # inline PTX and NVTX remain: manual work needed
     r = runner.invoke(app, ["migrate", "build", str(out), "--offload-arch", "gfx942"])

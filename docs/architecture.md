@@ -42,8 +42,22 @@ the Pydantic model it gets back.
 
 **Static vs executed evidence.** Every `CheckResult` carries an `evidence` field.
 A GPU that `rocminfo` lists is `detected`. A GPU that ran the probe kernel and
-returned the correct result is `executed`. The UI shows "GPU execution
-verified: yes" only for executed PASS checks.
+returned the correct result is `executed`. Compatibility checks are
+`configured`: they are inferred from AMD's documentation. The JSON values are a
+stable API. People see the labels from `Evidence.label` instead: "ran on GPU",
+"detected, not run", "inferred from AMD docs" and "none". The legend is
+`EVIDENCE_LEGEND`, in `models/common.py`. `CheckResult.hardware_verified` is
+true only for an `executed` PASS. That is the only thing the CLI, TUI and
+reports count as "verified on AMD hardware", and
+`DiagnosticReport.hardware_verified_checks` lists those checks.
+
+**Matrix provenance.** Every rule in `rocm_matrix.json` has a `ref` list. It
+points into `references`, which gives the page, section, row, anchored URL,
+ROCm version, retrieval date and verification status. The loader rejects
+undefined refs, and also an `unverified` reference that has no `note`.
+Validators pass the refs behind each decision to `CompatibilityMatrix.cite()`,
+so a check's `source` names the exact AMD section. Schema 1 files (no refs)
+still load and cite page-level URLs.
 
 **Skip, don't guess.** If a tool or device is missing, the checks that need it
 become SKIPPED, each with a reason. When one step of the HIP probe fails
@@ -58,7 +72,10 @@ unchanged and marked `failed`, so the audit flags its leftover CUDA.
 
 **We don't translate CUDA ourselves.** Translation is always done by
 `hipify-clang` or `hipify-perl`. KernelVet's own rules only *classify* code,
-before conversion (analyze) and after it (audit).
+before conversion (analyze) and after it (audit). HIPIFY output is not
+guaranteed to work. `HIPIFY_DISCLAIMER` (in `models/report.py`) appears in
+`migrate convert` output, in `MigrationReport.conversion_disclaimer` and in
+every migration export.
 
 **Translator choice.** `hipify-clang` is chosen only when CUDA headers are found,
 because it parses CUDA with clang. Otherwise `hipify-perl` is used. The reason

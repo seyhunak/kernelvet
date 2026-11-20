@@ -7,7 +7,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from kernelvet.models.common import CheckResult, CheckStatus, OverallStatus
+from kernelvet.models.common import EVIDENCE_LEGEND, CheckResult, CheckStatus, Evidence, OverallStatus
 from kernelvet.models.migration import Finding, FindingCategory, StageStatus
 from kernelvet.models.report import (
     BenchmarkReport,
@@ -112,8 +112,30 @@ def checks_table(title: str, checks: list[CheckResult], *, verbose: bool = False
             result.append("\n" + c.detail, style="dim")
         if c.remediation and c.status in (CheckStatus.FAIL, CheckStatus.WARNING):
             result.append("\n→ " + c.remediation, style="italic")
-        t.add_row(c.name, status_text(c.status), str(c.evidence), result)
+        t.add_row(c.name, status_text(c.status), c.evidence.label, result)
     return t
+
+
+def evidence_summary(checks: list[CheckResult]) -> Text:
+    """One line saying how many results were verified on AMD hardware versus detected or inferred."""
+    verified = [c for c in checks if c.hardware_verified]
+    detected = sum(1 for c in checks if c.evidence == Evidence.DETECTED)
+    inferred = sum(1 for c in checks if c.evidence == Evidence.CONFIGURED)
+    if verified:
+        head = Text(
+            f"Verified on AMD hardware (ran on GPU and passed): {len(verified)} check(s)", style="green"
+        )
+    else:
+        head = Text("Verified on AMD hardware: none. No check ran on the GPU and passed", style="yellow")
+    head.append(
+        f"\nNot hardware-verified: {detected} detected, not run · {inferred} inferred from AMD docs",
+        style="dim",
+    )
+    return head
+
+
+def evidence_legend() -> Text:
+    return Text(EVIDENCE_LEGEND, style="dim")
 
 
 def overall_panel(status: OverallStatus) -> Panel:
@@ -131,24 +153,30 @@ def render_diagnosis(r: DiagnosticReport, *, verbose: bool = False) -> Renderabl
         "system": "System",
         "hardware": "Hardware",
         "software": "Software",
-        "runtime": "Runtime Checks (executed)",
+        "runtime": "Runtime (code run on the GPU, when one is available)",
     }
     for cat, title in cats.items():
         checks = [c for c in r.checks if c.category == cat]
         if checks:
             parts.append(checks_table(title, checks, verbose=verbose))
     if r.compatibility:
-        parts.append(render_compatibility(r.compatibility, verbose=verbose))
-    parts.append(overall_panel(r.status))
+        parts.append(render_compatibility(r.compatibility, verbose=verbose, legend=False))
+    parts += [evidence_summary(r.all_checks()), evidence_legend(), overall_panel(r.status)]
     return Group(*parts)
 
 
-def render_compatibility(c: CompatibilityReport, *, verbose: bool = False) -> RenderableType:
-    title = f"Compatibility (AMD ROCm {c.matrix_version} docs, retrieved {c.matrix_retrieved})"
-    return Group(
+def render_compatibility(
+    c: CompatibilityReport, *, verbose: bool = False, legend: bool = True
+) -> RenderableType:
+    title = f"Compatibility, inferred from AMD ROCm {c.matrix_version} docs (retrieved {c.matrix_retrieved})"
+    parts: list[RenderableType] = [
         checks_table(title, c.checks, verbose=verbose),
+        Text(c.basis, style="yellow"),
         Text("Sources: " + " | ".join(c.matrix_sources), style="dim"),
-    )
+    ]
+    if legend:
+        parts.append(evidence_legend())
+    return Group(*parts)
 
 
 def findings_table(title: str, findings: list[Finding], limit: int = 50) -> Table:
@@ -251,7 +279,11 @@ def render_migration(r: MigrationReport) -> RenderableType:
     st.add_column("Status")
     for label, value in stage_rows(r.stages):
         st.add_row(label, Text(value, style=STAGE_STYLE[StageStatus(value)]))
-    parts += [st, Text(verification_note(r.stages), style="italic")]
+    parts += [
+        st,
+        Text(verification_note(r.stages), style="italic"),
+        Text(r.conversion_disclaimer, style="yellow"),
+    ]
     return Group(*parts)
 
 

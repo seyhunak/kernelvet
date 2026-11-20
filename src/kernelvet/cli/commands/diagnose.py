@@ -29,6 +29,8 @@ from kernelvet.models.report import DiagnosticReport
 from kernelvet.reporting import OutputFormat
 from kernelvet.reporting.terminal import (
     OVERALL_STYLE,
+    evidence_legend,
+    evidence_summary,
     gpu_table,
     host_table,
     render_compatibility,
@@ -155,12 +157,8 @@ def doctor(
         for c in sorted(problems, key=lambda c: c.status != CheckStatus.FAIL)[:12]:
             t.add_row(c.name, status_text(c.status), c.remediation or c.summary)
         out.print(t)
-    executed = [c for c in checks if c.evidence == "executed" and c.status == CheckStatus.PASS]
-    out.print(
-        Text(
-            f"GPU execution verified: {'yes' if executed else 'no'}", style="green" if executed else "yellow"
-        )
-    )
+    out.print(evidence_summary(checks))
+    out.print(evidence_legend())
     out.print(Text(f"Overall Status: {report.status.value}", style=OVERALL_STYLE[report.status]))
     out.print("[dim]Run `kernelvet diagnose -v` for full details.[/dim]")
     raise typer.Exit(ExitCode.for_status(report.status))
@@ -176,7 +174,11 @@ def compatibility(
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show check details"),
 ) -> None:
-    """Validate this machine against AMD's published ROCm compatibility data (static, no GPU execution)."""
+    """Compare this machine with AMD's published ROCm compatibility data.
+
+    Results are inferred from documentation: nothing runs on the GPU, so a PASS means the
+    detected version is listed by AMD, not that it was tested on this hardware.
+    """
     s = settings_or_exit()
     fmt = resolve_format(fmt, output)
     m = _matrix_or_exit(str(matrix) if matrix else s.compatibility_matrix)

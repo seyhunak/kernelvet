@@ -32,7 +32,9 @@ pytest -m "gpu or hipify"                          # real-tool tests (ROCm machi
    is SKIPPED (or UNAVAILABLE for a verification stage), with a reason. PRs that
    make a check pass without evidence will not be merged.
 2. **Keep static and executed evidence apart.** Set `evidence` correctly on
-   every new `CheckResult`.
+   every new `CheckResult`. Use `executed` only when code really ran on the
+   GPU. Nothing inferred from documentation or configuration may read as
+   hardware-verified.
 3. **External commands** go through `HostContext.run` (or `CommandRunner.run`)
    and nothing else:
    * argv lists only, never shell strings,
@@ -43,6 +45,9 @@ pytest -m "gpu or hipify"                          # real-tool tests (ROCm machi
    validated directory (see `utils/paths.py`).
 5. **Compatibility data must be cited.** If you change `rocm_matrix.json`:
    * update `retrieved` and the source URLs,
+   * give every new or changed rule a `ref` to an entry in `references`, with
+     the page, section, row, ROCm version and retrieval date; mark a reference
+     `unverified` with a `note` if you could not check it against the page,
    * cite in the PR the AMD page each change comes from,
    * record disagreements between AMD pages in `notes`; don't pick a winner
      silently.

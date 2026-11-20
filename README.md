@@ -26,8 +26,8 @@ a keyboard-driven terminal UI (`kernelvet tui`) share one engine.
 | Area | What you get |
 | --- | --- |
 | **Diagnose** | Detects the OS, kernel, GPUs (`amd-smi`, `rocminfo`, sysfs), ROCm, the HIP compiler, the `amdgpu` driver, ROCm libraries and PyTorch. Then it **compiles and runs** a small HIP program on each GPU and runs real PyTorch tensor operations. |
-| **Compatibility** | Checks the host against a dated snapshot of AMD's published compatibility data. Each check names the page its data came from. |
-| **Migrate** | Scans a CUDA project, classifies every CUDA construct, scores readiness, plans the migration, converts it with **AMD HIPIFY** into a separate directory, audits the result, builds it with `hipcc` and runs its tests. |
+| **Compatibility** | Compares the host with a dated snapshot of AMD's published compatibility data. Each check cites the exact AMD page, section and row its data came from. These results are **inferred from documentation**; nothing runs on the GPU. |
+| **Migrate** | Scans a CUDA project, classifies every CUDA construct, scores readiness, plans the migration, converts it with **AMD HIPIFY** into a separate directory, audits the result, builds it with `hipcc` and runs its tests. Converted code is **not guaranteed to work**; see [HIPIFY conversion is not a guarantee](#hipify-conversion-is-not-a-guarantee). |
 | **Benchmark** | Times a HIP bandwidth kernel and PyTorch matmuls on the GPU. `--profile` runs the HIP benchmark under `rocprofv3`; its output is saved to `--profile-dir`, or by default to `profiles/<timestamp>` in the data directory. Results come only from real runs. |
 | **Report** | Writes terminal, JSON, Markdown, self-contained HTML and SARIF (for findings). |
 | **TUI** | Eight sections: Overview, Diagnose, GPU Devices, Compatibility, CUDA→HIP Migration, Benchmarks, Reports, Settings. Long tasks run in background workers. |
@@ -37,8 +37,8 @@ a keyboard-driven terminal UI (`kernelvet tui`) share one engine.
 KernelVet is built to never claim more than it observed.
 
 * Every check is **PASS**, **WARNING**, **FAIL** or **SKIPPED**.
-* Every check also records *how* it knows its result: `detected` (static
-  inspection), `executed` (code ran on the device), `configured`, or `none`.
+* Every check also records *how* it knows its result. See
+  [Hardware-verified vs inferred results](#hardware-verified-vs-inferred-results).
 * If a tool is missing or there is no GPU, the check is **SKIPPED** and says why.
   It is never reported as PASS.
 * The overall status is:
@@ -56,6 +56,30 @@ KernelVet is built to never claim more than it observed.
 * GPU validation passes only when the tests passed **and** at least one test ran
   on a detected AMD GPU. On a CPU-only machine it is reported as **UNAVAILABLE**.
 * Benchmarks are never estimated or simulated.
+
+## Hardware-verified vs inferred results
+
+Only some checks run on AMD hardware. Every check carries an `evidence` value,
+and the CLI, TUI and every report show it in plain words:
+
+| Shown as | JSON `evidence` | What it means | Verified on AMD hardware? |
+| --- | --- | --- | --- |
+| **ran on GPU** | `executed` | KernelVet compiled and ran code on the GPU during this run (the HIP probe, PyTorch tensor ops). | **Yes**, but only when the check is PASS. |
+| **detected, not run** | `detected` | Read from `amd-smi`, `rocminfo`, `/sys`, files or tool versions. Nothing was executed. | No |
+| **inferred from AMD docs** | `configured` | Compared with AMD's published compatibility data (every `compat.*` check) or configuration. | No. A PASS means "listed by AMD", not "tested here". |
+| **none** | `none` | The check was not performed (always the case for SKIPPED). | No |
+
+* `kernelvet diagnose` and `kernelvet doctor` end with a line saying how many
+  checks were verified on AMD hardware. When none were, they say so.
+* JSON reports add `hardware_verified` and `evidence_label` to every check,
+  `hardware_verified_checks` (the IDs of checks that ran on the GPU and
+  passed) to a diagnosis, and an `evidence_legend`. Compatibility reports also
+  carry a `basis` statement.
+* SARIF results are static source analysis. Each result carries
+  `"evidence": "static-analysis"` and `"hardwareVerified": false`.
+* KernelVet itself has not yet been tested on real AMD GPU hardware. The
+  hardware paths have been exercised only against constructed fixtures (see
+  [What has and has not been verified](#what-has-and-has-not-been-verified)).
 
 ## Install
 
@@ -136,6 +160,22 @@ It also refuses a non-empty output directory unless you pass `--force`. Each
 stage saves its state in `<hip-project>/.kernelvet/`, so later stages and
 `report` can pick it up. This includes the full HIPIFY log in `conversion.log`.
 
+### HIPIFY conversion is not a guarantee
+
+KernelVet does not translate CUDA itself; AMD HIPIFY does the conversion.
+**Automated conversion is not guaranteed to produce working HIP code.** A
+successful `convert` only means HIPIFY processed the files. Before you rely on
+the result:
+
+1. **Review** every converted file by hand. `migrate audit` points at leftover
+   CUDA and risky patterns, but it cannot prove the code is correct.
+2. **Compile** it with `migrate build`.
+3. **Run the tests on an AMD GPU** with `migrate test`. Only this stage
+   validates runtime behaviour.
+
+`migrate convert` and every migration report (terminal, JSON, Markdown, HTML
+and SARIF) repeat this warning.
+
 `build` and `test` can run inside Docker:
 
 ```bash
@@ -191,6 +231,12 @@ The bundled matrix is
   compatibility-matrix page and release-history page.
 * It records the ROCm version (10.1.0), the date it was retrieved, and every
   source URL.
+* Every rule carries a `ref` that points into a `references` table. Each
+  reference gives the exact AMD page, section and row or footnote, its URL with
+  the section anchor, the ROCm version that page describes, the transcription
+  date, and the date it was last re-checked (`verification`). A reference that
+  could not be re-checked is marked `unverified` and says why. Checks cite these
+  references in their `source` field.
 * AMD's pages sometimes disagree with each other. Those conflicts are written
   into the file's `notes` instead of being resolved silently.
 * A value earns PASS only if AMD lists it explicitly. Unlisted values are
@@ -229,7 +275,9 @@ Bug reports with real `rocminfo` / `amd-smi` output are very welcome.
 
 ## License
 
-Apache License 2.0. See [LICENSE](https://github.com/seyhunak/kernelvet/blob/main/LICENSE).
+Apache License 2.0. See [LICENSE](https://github.com/seyhunak/kernelvet/blob/main/LICENSE)
+(the unmodified license text) and [NOTICE](https://github.com/seyhunak/kernelvet/blob/main/NOTICE)
+(copyright and trademark notices).
 
 ## Disclaimer and trademarks
 
@@ -239,8 +287,17 @@ not affiliated with, sponsored by, or endorsed by Advanced Micro Devices, Inc.
 statement of support or certification. For authoritative information, use the
 [AMD ROCm documentation](https://rocm.docs.amd.com/).
 
-AMD, AMD ROCm, AMD Instinct, AMD CDNA, AMD RDNA and Radeon are trademarks of
-Advanced Micro Devices, Inc. CUDA is a trademark of NVIDIA Corporation. Other
-names are used for identification purposes only and may be trademarks of their
-respective owners. KernelVet uses these names only to say which hardware and
-software it works with. It does not use AMD logos.
+### Trademarks
+
+* AMD, AMD ROCm, AMD Instinct, AMD CDNA, AMD RDNA, Radeon and Ryzen are
+  trademarks of Advanced Micro Devices, Inc.
+* NVIDIA and CUDA are trademarks or registered trademarks of NVIDIA
+  Corporation in the U.S. and other countries.
+* Other names are used for identification purposes only and may be trademarks
+  of their respective owners.
+
+KernelVet uses these names only to say which hardware and software it works
+with (nominative use). Their use does not imply any affiliation with, or
+endorsement by, AMD or NVIDIA. KernelVet does not use AMD or NVIDIA logos. The
+same notice is in [NOTICE](https://github.com/seyhunak/kernelvet/blob/main/NOTICE),
+in `kernelvet --help` and at the end of every Markdown and HTML report.

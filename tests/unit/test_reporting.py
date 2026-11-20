@@ -36,7 +36,8 @@ def test_markdown_sections(diag: DiagnosticReport) -> None:
         "## System",
         "## GPUs",
         "## Software",
-        "## Runtime Checks (executed on the GPU)",
+        "## Runtime Checks (code run on the GPU, when one is available)",
+        "## Evidence",
         "## Compatibility",
     ):
         assert heading in md
@@ -92,6 +93,62 @@ def test_migration_markdown_states_verification_limits(cuda_project: Path) -> No
     md = render_text(report, OutputFormat.MARKDOWN)
     assert "## Verification stages" in md and "No verification stage has passed yet." in md
     assert "not correctness" in md
+
+
+def test_every_migration_format_says_conversion_is_not_guaranteed(cuda_project: Path) -> None:
+    from kernelvet.models.report import HIPIFY_DISCLAIMER
+
+    report = MigrationReport(project=str(cuda_project), analysis=analyze_project(cuda_project))
+    for fmt in (OutputFormat.MARKDOWN, OutputFormat.HTML, OutputFormat.JSON):
+        assert "not guaranteed to produce working HIP code" in render_text(report, fmt), fmt
+    sarif = json.loads(render_text(report, OutputFormat.SARIF))
+    assert sarif["runs"][0]["properties"]["conversionDisclaimer"] == HIPIFY_DISCLAIMER
+    assert "manual" in HIPIFY_DISCLAIMER.lower() or "by hand" in HIPIFY_DISCLAIMER
+    assert "compile" in HIPIFY_DISCLAIMER and "tests" in HIPIFY_DISCLAIMER
+
+
+def test_sarif_results_are_marked_static_not_hardware_verified(cuda_project: Path) -> None:
+    report = MigrationReport(project=str(cuda_project), analysis=analyze_project(cuda_project))
+    run = json.loads(render_text(report, OutputFormat.SARIF))["runs"][0]
+    assert "Nothing was compiled or run on an AMD GPU" in run["properties"]["evidence"]
+    assert run["results"]
+    assert all(r["properties"]["evidence"] == "static-analysis" for r in run["results"])
+    assert not any(r["properties"]["hardwareVerified"] for r in run["results"])
+
+
+def test_only_executed_passes_count_as_hardware_verified(diag: DiagnosticReport) -> None:
+    checks = diag.all_checks()
+    verified = [c for c in checks if c.hardware_verified]
+    assert verified, "the fake MI300X host runs the HIP probe"
+    assert all(c.evidence == "executed" and c.status == "PASS" for c in verified)
+    assert diag.hardware_verified_checks == [c.id for c in verified]
+    assert diag.compatibility is not None
+    assert not any(c.hardware_verified for c in diag.compatibility.checks)
+    data = json.loads(render_text(diag, OutputFormat.JSON))
+    compat = data["compatibility"]["checks"]
+    assert {c["evidence"] for c in compat} == {"configured"}  # stable JSON value
+    assert {c["evidence_label"] for c in compat} == {"inferred from AMD docs"}
+    assert not any(c["hardware_verified"] for c in compat)
+    assert "Nothing is run on the GPU" in data["compatibility"]["basis"]
+    assert "only a PASS with this evidence is verified on AMD hardware" in data["evidence_legend"]
+
+
+def test_reports_label_inferred_results_as_not_hardware_verified(diag: DiagnosticReport) -> None:
+    from rich.console import Console
+
+    from kernelvet.reporting.terminal import render_diagnosis
+
+    md = render_text(diag, OutputFormat.MARKDOWN)
+    html_text = render_text(diag, OutputFormat.HTML)
+    console = Console(width=200, record=True)
+    console.print(render_diagnosis(diag))
+    term = " ".join(console.export_text().split())
+    for text in (md, html_text, term):
+        assert "inferred from AMD docs" in text
+        assert "Verified on AMD hardware" in text
+        assert "| configured |" not in text  # raw enum values are not the displayed wording
+    assert "Compatibility, inferred from AMD docs" in md and "Compatibility, inferred from AMD" in term
+    assert "Exact references per check:" in md and "Supported GPUs" in md
 
 
 @pytest.mark.parametrize(

@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 
 class CheckStatus(StrEnum):
@@ -36,6 +36,29 @@ class Evidence(StrEnum):
     CONFIGURED = "configured"  # derived from configuration or reference data
     NONE = "none"  # nothing could be collected
 
+    @property
+    def label(self) -> str:
+        """Plain-language wording shown wherever evidence is displayed (CLI, TUI, reports)."""
+        return EVIDENCE_LABELS[self]
+
+
+# The JSON value ("executed", "detected", ...) is a stable API; these labels are what people read.
+EVIDENCE_LABELS: dict[Evidence, str] = {
+    Evidence.EXECUTED: "ran on GPU",
+    Evidence.DETECTED: "detected, not run",
+    Evidence.CONFIGURED: "inferred from AMD docs",
+    Evidence.NONE: "none",
+}
+
+EVIDENCE_LEGEND = (
+    "Evidence: 'ran on GPU' (executed) = KernelVet compiled and ran code on the GPU during this run; "
+    "only a PASS with this evidence is verified on AMD hardware. "
+    "'detected, not run' (detected) = read from tools, files or /sys; nothing was executed. "
+    "'inferred from AMD docs' (configured) = compared with AMD's published compatibility data or "
+    "configuration; not tested on this hardware. "
+    "'none' = not performed."
+)
+
 
 class OverallStatus(StrEnum):
     HEALTHY = "HEALTHY"
@@ -56,6 +79,17 @@ class CheckResult(BaseModel):
     remediation: str | None = None
     source: str | None = Field(default=None, description="Where the reference data for this check came from")
     duration_ms: float | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def hardware_verified(self) -> bool:
+        """True only for a PASS produced by running code on the GPU in this run."""
+        return self.status == CheckStatus.PASS and self.evidence == Evidence.EXECUTED
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def evidence_label(self) -> str:
+        return self.evidence.label
 
     @model_validator(mode="after")
     def _skipped_has_no_evidence(self) -> Self:

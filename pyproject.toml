@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Unofficial open-source diagnostics and CUDA-to-HIP migration toolkit for AMD GPUs. Not affiliated with AMD."
 readme = "README.md"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
 authors = [{ name = "KernelVet contributors" }]
 keywords = ["rocm", "hip", "amd", "gpu", "cuda", "hipify", "diagnostics", "tui"]
@@ -57,7 +57,7 @@ path = "src/kernelvet/__init__.py"
 packages = ["src/kernelvet"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "tests", "README.md", "LICENSE", "docs", "examples"]
+include = ["src", "tests", "README.md", "LICENSE", "NOTICE", "docs", "examples"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

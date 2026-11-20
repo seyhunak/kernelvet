@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from kernelvet.models.common import CheckResult
+from kernelvet.models.common import CheckResult, Evidence
 from kernelvet.models.migration import Finding
 from kernelvet.models.report import (
     TRADEMARKS,
@@ -82,8 +82,29 @@ def _checks(title: str, checks: list[CheckResult]) -> list[str]:
         return []
     out = [f"## {title}", "", "| Check | Status | Evidence | Result |", "|---|---|---|---|"]
     for c in checks:
-        out.append(f"| {_esc(c.name)} | {ICON[c.status]} | {c.evidence} | {_esc(c.summary)} |")
+        out.append(f"| {_esc(c.name)} | {ICON[c.status]} | {c.evidence.label} | {_esc(c.summary)} |")
     return [*out, ""]
+
+
+def _evidence(checks: list[CheckResult], legend: str) -> list[str]:
+    verified = [c.name for c in checks if c.hardware_verified]
+    detected = sum(1 for c in checks if c.evidence == Evidence.DETECTED)
+    inferred = sum(1 for c in checks if c.evidence == Evidence.CONFIGURED)
+    head = (
+        f"**Verified on AMD hardware (ran on GPU and passed):** {len(verified)} check(s): {', '.join(verified)}"
+        if verified
+        else "**Verified on AMD hardware:** none. No check ran on the GPU and passed."
+    )
+    return [
+        "## Evidence",
+        "",
+        head,
+        "",
+        f"Not hardware-verified: {detected} detected, not run · {inferred} inferred from AMD docs.",
+        "",
+        f"> {legend}",
+        "",
+    ]
 
 
 def _findings(title: str, findings: list[Finding], limit: int = 200) -> list[str]:
@@ -109,12 +130,13 @@ def diagnostic_markdown(r: DiagnosticReport) -> str:
         "system": "System Checks",
         "hardware": "Hardware Checks",
         "software": "Software Checks",
-        "runtime": "Runtime Checks (executed on the GPU)",
+        "runtime": "Runtime Checks (code run on the GPU, when one is available)",
     }
     for cat, checks in by_cat.items():
         lines += _checks(titles.get(cat, cat.title()), checks)
     if r.compatibility:
         lines += compatibility_section(r.compatibility)
+    lines += _evidence(r.all_checks(), r.evidence_legend)
     if r.recommendations:
         lines += ["## Recommendations", "", *[f"- {rec}" for rec in r.recommendations], ""]
     return "\n".join(lines + _footer())
@@ -122,9 +144,13 @@ def diagnostic_markdown(r: DiagnosticReport) -> str:
 
 def compatibility_section(c: CompatibilityReport) -> list[str]:
     lines = _checks(
-        f"Compatibility (matrix: ROCm {c.matrix_version}, retrieved {c.matrix_retrieved})", c.checks
+        f"Compatibility, inferred from AMD docs (matrix: ROCm {c.matrix_version}, retrieved {c.matrix_retrieved})",
+        c.checks,
     )
-    lines += ["Sources:", "", *[f"- <{u}>" for u in c.matrix_sources], ""]
+    lines += [f"> {c.basis}", "", "Sources:", "", *[f"- <{u}>" for u in c.matrix_sources], ""]
+    cited = [(x.name, x.source) for x in c.checks if x.source]
+    if cited:
+        lines += ["Exact references per check:", "", *[f"- {_esc(n)}: {_esc(s)}" for n, s in cited], ""]
     return lines
 
 
@@ -136,14 +162,15 @@ def compatibility_markdown(c: CompatibilityReport, meta: ReportMeta | None = Non
         f"**Status: {c.status}**",
         "",
     ]
-    return "\n".join(lines + compatibility_section(c) + _footer())
+    lines += [*compatibility_section(c), f"> {c.evidence_legend}", ""]
+    return "\n".join(lines + _footer())
 
 
 def migration_markdown(r: MigrationReport) -> str:
     lines = [f"# KernelVet Migration Report: `{r.project}`", "", *_meta(r.meta)]
     lines += ["## Verification stages", "", "| Stage | Status |", "|---|---|"]
     lines += [f"| {k} | {v} |" for k, v in stage_rows(r.stages)]
-    lines += ["", f"> {verification_note(r.stages)}", ""]
+    lines += ["", f"> {verification_note(r.stages)}", "", f"> **{r.conversion_disclaimer}**", ""]
     if r.analysis:
         a = r.analysis
         inv = a.inventory

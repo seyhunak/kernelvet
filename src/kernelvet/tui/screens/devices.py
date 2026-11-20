@@ -108,7 +108,7 @@ Keys: **ctrl+r** rescan.
                 ("UUID", g.uuid or "?"),
                 ("HSA node", str(g.node_id) if g.node_id is not None else "?"),
                 ("Detected by", ", ".join(g.sources)),
-                ("Evidence", g.evidence.value),
+                ("Evidence", g.evidence.label),
             ]
         )
 
@@ -119,11 +119,15 @@ class CompatPane(Pane):
     HELP = """\
 ## Compatibility
 
-Validates this host against a snapshot of AMD's published ROCm documentation
+Compares this host with a snapshot of AMD's published ROCm documentation
 (system requirements + compatibility matrix). The snapshot's ROCm version, retrieval
-date and source URLs are shown below every result.
+date and source URLs are shown below every result, and each result cites the exact
+AMD page, section and row it relies on.
 
-* **PASS** – the detected value is explicitly listed.
+Every result here is **inferred from AMD docs**: nothing runs on the GPU. Hardware is
+only verified by the runtime checks on the Diagnose tab.
+
+* **PASS** – the detected value is explicitly listed by AMD (not tested on this hardware).
 * **WARNING** – not listed, ambiguous, or the snapshot doesn't cover your ROCm release.
 * **FAIL** – a known incompatibility (e.g. an unsupported GPU, macOS).
 * **SKIPPED** – the input could not be detected.
@@ -157,7 +161,11 @@ Keys: **r** re-evaluate.
             return
         for i, chk in enumerate(c.checks):
             t.add_row(chk.name, badge(chk.status), chk.summary, key=str(i))
-        self.query_one("#cp-status", Static).update(Text("Status: ") + badge(c.status))
+        self.query_one("#cp-status", Static).update(
+            Text("Status: ")
+            + badge(c.status)
+            + Text("   inferred from AMD docs, not run on the GPU", style="yellow")
+        )
         m = load_matrix(self.state.settings.compatibility_matrix)
         src = Text()
         src.append(
@@ -201,6 +209,7 @@ Keys: **r** re-evaluate.
             return
         chk = c.checks[int(event.row_key.value)]
         text = Text(f"{chk.name}\n", style="bold")
+        text.append(f"Evidence: {chk.evidence.label} (not verified on hardware)\n", style="yellow")
         text.append(chk.summary + "\n")
         if chk.detail:
             text.append(chk.detail + "\n", style="dim")

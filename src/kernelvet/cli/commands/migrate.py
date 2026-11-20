@@ -44,7 +44,7 @@ from kernelvet.models.migration import (
     FindingCategory,
     StageStatus,
 )
-from kernelvet.models.report import MigrationReport
+from kernelvet.models.report import HIPIFY_DISCLAIMER, MigrationReport
 from kernelvet.reporting import OutputFormat
 from kernelvet.reporting.terminal import render_migration
 from kernelvet.utils.paths import PathError, existing_dir
@@ -146,7 +146,11 @@ def convert(
     fmt: OutputFormat | None = FormatOpt,
     report_file: Path | None = typer.Option(None, "--report", help="Also write a report file"),
 ) -> None:
-    """Convert CUDA sources to HIP with AMD HIPIFY into a separate directory (sources are never modified)."""
+    """Convert CUDA sources to HIP with AMD HIPIFY into a separate directory (sources are never modified).
+
+    The converted code is not guaranteed to work: review it by hand, then compile it and run its
+    tests on an AMD GPU (`migrate audit`, `migrate build`, `migrate test`).
+    """
     s = settings_or_exit()
     root = _dir(project)
     ctx = HostContext(timeout=s.command_timeout)
@@ -191,6 +195,8 @@ def convert(
         )
     fmt = resolve_format(fmt, report_file) if (fmt or report_file) else OutputFormat.TERMINAL
     emit(report, fmt, report_file, lambda: render_migration(report))
+    if fmt is not OutputFormat.TERMINAL:  # the terminal rendering already ends with it
+        err.print(f"[yellow]{HIPIFY_DISCLAIMER}[/yellow]")
     if not dry_run:
         err.print(f"Migrated project: {result.output}  ·  log: {result.log_path}")
         err.print("Next: kernelvet migrate audit " + result.output)

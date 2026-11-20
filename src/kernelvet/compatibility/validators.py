@@ -68,6 +68,7 @@ def validate_gpu(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult
     if not gpus:
         return _check(cid, name, CheckStatus.SKIPPED, "No AMD GPU detected, nothing to validate")
     lines: list[str] = []
+    refs: list[str] = []
     worst = CheckStatus.PASS
     remediation = None
     for g in gpus:
@@ -76,6 +77,7 @@ def validate_gpu(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult
         if not gfx:
             status, why = CheckStatus.WARNING, "architecture (gfx target) could not be detected"
         elif entries := m.entries_for_gfx(gfx):
+            refs += [r for e in entries for r in e.ref]
             statuses = {e.status for e in entries}
             names = ", ".join(e.name for e in entries)
             if statuses == {"unsupported"}:
@@ -86,8 +88,10 @@ def validate_gpu(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult
             else:
                 status, why = CheckStatus.PASS, f"{gfx} is listed as supported ({entries[0].arch}: {names})"
         elif gfx in m.targets_uncertain:
+            refs += m.targets_uncertain_ref
             status, why = CheckStatus.WARNING, f"{gfx}: {m.targets_uncertain[gfx]}"
         else:
+            refs += [r for e in m.gpus for r in e.ref]
             status = CheckStatus.WARNING
             why = f"{gfx} is not listed; AMD states unlisted GPUs are not officially supported"
         lines.append(f"{label}: {why}")
@@ -100,7 +104,7 @@ def validate_gpu(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult
         lines[0] if len(lines) == 1 else f"{len(gpus)} GPUs checked",
         detail="\n".join(lines),
         remediation=remediation,
-        source=m.source_url("sysreq+matrix"),
+        source=m.cite(refs, "sysreq+matrix"),
     )
 
 
@@ -134,7 +138,7 @@ def match_os(
 def validate_os(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
     cid, name = "compat.os", "Operating System Support"
     host = inp.host
-    src = m.source_url("sysreq+matrix")
+    src = m.cite([r for entries in m.os.values() for e in entries for r in e.ref], "sysreq+matrix")
     if host.os_name == "macOS" or (host.os_id is None and host.os_name == "Darwin"):
         return _check(
             cid,
@@ -158,7 +162,8 @@ def validate_os(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
     matches = match_os(host, m, classes)
     pretty = host.os_pretty or f"{host.os_id} {host.os_version}"
     if not matches:
-        listed = sorted({e.label for c in (classes or {"instinct", "radeon"}) for e in m.os.get(c, [])})
+        considered = [e for c in (classes or {"instinct", "radeon"}) for e in m.os.get(c, [])]
+        listed = sorted({e.label for e in considered})
         return _check(
             cid,
             name,
@@ -166,7 +171,7 @@ def validate_os(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
             f"{pretty} is not in the supported OS list",
             detail="Listed: " + "; ".join(listed),
             remediation="Use a distribution listed in AMD's ROCm system requirements",
-            source=src,
+            source=m.cite([r for e in considered for r in e.ref], "sysreq+matrix"),
         )
     # GPU-specific OS restrictions
     os_id, ver = _os_key(host)
@@ -182,11 +187,18 @@ def validate_os(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
                     f"{pretty} is restricted to specific GPUs",
                     detail=r.note,
                     remediation="Use an OS listed for your GPU",
-                    source=m.source_url(r.source),
+                    source=m.cite(r.ref, r.source),
                 )
     labels = ", ".join(sorted({f"{e.label} ({c})" for c, e in matches}))
     note = "" if classes else " (no AMD GPU detected, so the GPU-specific OS list was not applied)"
-    return _check(cid, name, CheckStatus.PASS, f"{pretty} is listed{note}", detail=labels, source=src)
+    return _check(
+        cid,
+        name,
+        CheckStatus.PASS,
+        f"{pretty} is listed{note}",
+        detail=labels,
+        source=m.cite([r for _, e in matches for r in e.ref], "sysreq+matrix"),
+    )
 
 
 def validate_kernel(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
@@ -201,6 +213,7 @@ def validate_kernel(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRes
     if not matches:
         return _check(cid, name, CheckStatus.SKIPPED, "OS not in the matrix, so no kernel list applies")
     kernels = sorted({k for _, e in matches for k in e.kernels})
+    kernel_src = m.cite([r for _, e in matches for r in e.ref], "sysreq+matrix")
     if not kernels:
         return _check(
             cid,
@@ -208,7 +221,7 @@ def validate_kernel(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRes
             CheckStatus.WARNING,
             f"Kernel {host.kernel}: the matrix lists no explicit "
             "kernel version for this OS (e.g. Oracle UEK)",
-            source=m.source_url("matrix"),
+            source=kernel_src,
         )
     if kernel_mm in kernels:
         return _check(
@@ -216,7 +229,7 @@ def validate_kernel(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRes
             name,
             CheckStatus.PASS,
             f"Kernel {host.kernel} matches listed {kernel_mm}",
-            source=m.source_url("sysreq+matrix"),
+            source=kernel_src,
         )
     return _check(
         cid,
@@ -225,7 +238,7 @@ def validate_kernel(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRes
         f"Kernel {host.kernel} is not one of the listed kernels",
         detail="Listed: " + ", ".join(kernels),
         remediation="Use the GA or HWE kernel listed for your distribution",
-        source=m.source_url("sysreq+matrix"),
+        source=kernel_src,
     )
 
 
@@ -269,7 +282,7 @@ def validate_rocm(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResul
         CheckStatus.WARNING,
         why,
         remediation=f"Check the compatibility matrix for ROCm {major_minor(ver)} in AMD's docs",
-        source=m.source_url("releases"),
+        source=m.cite(m.release_versions_ref, "releases"),
     )
 
 
@@ -298,13 +311,19 @@ def validate_driver(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRes
             "amdgpu is loaded but reports no version (likely the distribution's inbox driver)",
             detail="The matrix lists specific amdgpu versions for Instinct and Radeon; "
             "Ryzen APUs use the inbox driver.",
-            source=m.source_url("matrix"),
+            source=m.cite(m.amdgpu_driver.ref, m.amdgpu_driver.source),
         )
     listed: set[str] = set()
     for c in classes or {"instinct", "radeon"}:
         listed.update(getattr(m.amdgpu_driver, c))
     if any(same_release(ver, v, depth=3) for v in listed):
-        return _check(cid, name, CheckStatus.PASS, f"amdgpu {ver} is listed", source=m.source_url("matrix"))
+        return _check(
+            cid,
+            name,
+            CheckStatus.PASS,
+            f"amdgpu {ver} is listed",
+            source=m.cite(m.amdgpu_driver.ref, m.amdgpu_driver.source),
+        )
     return _check(
         cid,
         name,
@@ -313,7 +332,7 @@ def validate_driver(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRes
         detail="Listed: "
         + ", ".join(sorted(listed))
         + "\nThe kernel module may report a different version scheme than the matrix.",
-        source=m.source_url("matrix"),
+        source=m.cite(m.amdgpu_driver.ref, m.amdgpu_driver.source),
     )
 
 
@@ -360,7 +379,7 @@ def validate_pytorch(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRe
     if fw is None:
         return _check(cid, name, CheckStatus.SKIPPED, "Matrix has no PyTorch data")
     tmm = major_minor(t.version)
-    src = m.source_url(fw.source)
+    src = m.cite(fw.ref, fw.source)
     if tmm not in fw.versions:
         return _check(
             cid,

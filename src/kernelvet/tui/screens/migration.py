@@ -36,7 +36,7 @@ from kernelvet.migration import (
 from kernelvet.migration.hipify import choose_translator
 from kernelvet.migration.workflow import assemble_report, compute_stages, save_state
 from kernelvet.models.migration import Finding, FindingCategory, StageStatus
-from kernelvet.models.report import MigrationReport
+from kernelvet.models.report import HIPIFY_DISCLAIMER, MigrationReport
 from kernelvet.reporting import OutputFormat, render_text
 from kernelvet.reporting.common import STAGE_LABELS, verification_note
 from kernelvet.tui.screens.base import Pane
@@ -63,6 +63,9 @@ class MigrationPane(Pane):
 
 Each action that cannot run on this host is disabled, and the reason is shown under the buttons.
 The readiness score measures *source conversion coverage only* – not correctness.
+
+**Automated conversion is not guaranteed to produce working HIP code.** Review every
+converted file by hand, then build and test it on an AMD GPU.
 
 Filter findings by category with the selector on the Findings tab.
 """
@@ -370,6 +373,7 @@ Filter findings by category with the selector on the Findings tab.
             m.audit = m.build = m.tests = None
             failed = len(result.failed)
             self.log_line(f"Converted into {result.output} — {failed} file(s) failed; log: {result.log_path}")
+            self.log_line(HIPIFY_DISCLAIMER)
             self._results_table()
             self._save_history("converted", f"{len(result.files)} files, {failed} failed", result.output)
             self._busy(False)

@@ -150,7 +150,7 @@ Keys: **ctrl+r** refresh inventory.
                 kv.update(Text("No diagnosis yet. Press 2 then r to run one.", style="dim"))
             return
         checks = r.all_checks()
-        executed = [c for c in checks if c.evidence == "executed" and c.status == "PASS"]
+        verified = r.hardware_verified_checks
         kv.set_rows(
             [
                 ("Overall", badge(r.status)),
@@ -162,8 +162,10 @@ Keys: **ctrl+r** refresh inventory.
                     ),
                 ),
                 (
-                    "GPU execution verified",
-                    Text("yes", style="green") if executed else Text("no", style="yellow"),
+                    "Verified on AMD hardware",
+                    Text(f"{len(verified)} check(s) ran on GPU and passed", style="green")
+                    if verified
+                    else Text("none; results are detected or inferred only", style="yellow"),
                 ),
                 ("Generated", r.meta.generated_at),
             ]

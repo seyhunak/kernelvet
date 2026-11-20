@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pydantic import BaseModel, Field, computed_field
 
 from kernelvet import __version__
-from kernelvet.models.common import CheckResult, OverallStatus, overall_status
+from kernelvet.models.common import EVIDENCE_LEGEND, CheckResult, OverallStatus, overall_status
 from kernelvet.models.migration import (
     AnalysisResult,
     AuditResult,
@@ -25,9 +25,20 @@ DISCLAIMER = (
     "and is not a certification authority."
 )
 TRADEMARKS = (
-    "AMD, AMD ROCm, AMD Instinct, AMD CDNA, AMD RDNA and Radeon are trademarks of Advanced "
-    "Micro Devices, Inc. CUDA is a trademark of NVIDIA Corporation. Other names are used for "
+    "AMD, AMD ROCm, AMD Instinct, AMD CDNA, AMD RDNA, Radeon and Ryzen are "
+    "trademarks of Advanced Micro Devices, Inc. NVIDIA and CUDA are trademarks or registered "
+    "trademarks of NVIDIA Corporation in the U.S. and other countries. Other names are used for "
     "identification purposes only and may be trademarks of their respective owners."
+)
+COMPATIBILITY_BASIS = (
+    "Compatibility results are inferred: detected versions are compared with a dated snapshot of "
+    "AMD's published ROCm documentation. Nothing is run on the GPU, so a PASS means 'listed in "
+    "AMD's documentation', not 'tested on this hardware'."
+)
+HIPIFY_DISCLAIMER = (
+    "Automated CUDA-to-HIP conversion (AMD HIPIFY) is not guaranteed to produce working HIP code. "
+    "Review every converted file by hand, then compile it and run its tests on an AMD GPU before "
+    "relying on it. A completed conversion only means HIPIFY processed the files."
 )
 
 
@@ -49,6 +60,8 @@ class CompatibilityReport(BaseModel):
     matrix_sources: list[str]
     matrix_retrieved: str
     checks: list[CheckResult]
+    basis: str = COMPATIBILITY_BASIS
+    evidence_legend: str = EVIDENCE_LEGEND
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -66,6 +79,14 @@ class DiagnosticReport(BaseModel):
     compatibility: CompatibilityReport | None = None
     recommendations: list[str] = Field(default_factory=list)
     status: OverallStatus = OverallStatus.REVIEW_REQUIRED
+    evidence_legend: str = EVIDENCE_LEGEND
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def hardware_verified_checks(self) -> list[str]:
+        """IDs of checks that passed by running code on the GPU in this run. Everything else was
+        detected statically or inferred from documentation."""
+        return [c.id for c in self.all_checks() if c.hardware_verified]
 
     def all_checks(self) -> list[CheckResult]:
         compat = self.compatibility.checks if self.compatibility else []
@@ -124,3 +145,4 @@ class MigrationReport(BaseModel):
     tests: TestRunResult | None = None
     stages: VerificationStages = Field(default_factory=VerificationStages)
     recommendations: list[str] = Field(default_factory=list)
+    conversion_disclaimer: str = HIPIFY_DISCLAIMER
