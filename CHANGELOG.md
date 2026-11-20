@@ -26,6 +26,16 @@ include breaking changes.
   ran on the GPU) and `evidence_label`. Diagnoses add `hardware_verified_checks`
   and `evidence_legend`. Compatibility reports add `basis` and
   `evidence_legend`. Migration reports add `conversion_disclaimer`.
+- The matrix now records every per-OS GPU limit from both AMD pages, by
+  product. New: Debian 12 (not MI100), Oracle Linux 10 and 9 (MI355X, MI350X,
+  MI325X, MI300X only), Oracle Linux 8 (MI300X only), SLES 16.0 (not MI100),
+  and RHEL 10.1/9.7 (not Radeon PRO V620). Debian 13, Rocky Linux 9 and
+  RHEL 8.10 are now checked per product, so MI300A on Debian 13 and MI325X on
+  Rocky Linux 9 or RHEL 8.10 are no longer reported as PASS. Where the 10.1.0
+  matrix and the 7.14 system requirements disagree, a GPU counts if either
+  page lists it, and the disagreement is written into the rule's `note`. A
+  GPU whose product cannot be identified gets WARNING when the answer depends
+  on it.
 - SARIF runs say their results are static analysis
   (`"evidence": "static-analysis"`, `"hardwareVerified": false`) and carry the
   HIPIFY disclaimer.

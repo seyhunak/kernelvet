@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from kernelvet.compatibility.matrix import CompatibilityMatrix, GpuClass, OsEntry
+from kernelvet.compatibility.matrix import CompatibilityMatrix, GpuClass, OsEntry, OsRestriction
 from kernelvet.models.common import CheckResult, CheckStatus, Evidence
 from kernelvet.models.system import GpuDevice, HostInfo, SoftwareInfo
 from kernelvet.utils.versions import major_minor, parse_version, same_release
@@ -178,14 +178,14 @@ def validate_os(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
     for r in m.os_gpu_restrictions:
         r_id, _, r_ver = r.os.partition(":")
         if r_id == os_id and (r_ver == ver or r_ver == major_minor(ver)):
-            bad = [g for g in inp.amd_gpus if (g.gfx_target or "").split(":")[0] not in r.gfx]
-            if bad:
+            problems = [p for g in inp.amd_gpus if (p := _restriction_problem(r, g, m))]
+            if problems:
                 return _check(
                     cid,
                     name,
                     CheckStatus.WARNING,
                     f"{pretty} is restricted to specific GPUs",
-                    detail=r.note,
+                    detail="\n".join([*problems, f"AMD: {r.note}"]),
                     remediation="Use an OS listed for your GPU",
                     source=m.cite(r.ref, r.source),
                 )
@@ -198,6 +198,30 @@ def validate_os(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
         f"{pretty} is listed{note}",
         detail=labels,
         source=m.cite([r for _, e in matches for r in e.ref], "sysreq+matrix"),
+    )
+
+
+def _restriction_problem(r: OsRestriction, g: GpuDevice, m: CompatibilityMatrix) -> str | None:
+    """Why a detected GPU is not (or may not be) supported on a restricted OS; ``None`` if it is."""
+    gfx = (g.gfx_target or "").split(":")[0]
+    label = g.marketing_name or f"GPU {g.index}"
+    not_listed = f"{label} ({gfx or 'unknown target'}) is not listed for this OS"
+    if r.gfx:  # schema 1 matrices restrict by LLVM target
+        return None if gfx in r.gfx else not_listed
+    candidates = m.entries_for_gfx(gfx)
+    if not candidates:
+        return not_listed
+    product = m.identify_gpu(gfx, g.marketing_name)
+    if product is not None:
+        return None if r.allows(product.name) else f"{product.name} is not listed for this OS"
+    allowed = [e.name for e in candidates if r.allows(e.name)]
+    if len(allowed) == len(candidates):
+        return None
+    if not allowed:
+        return not_listed
+    return (
+        f"{label} ({gfx}): could not tell which product this is; for this OS AMD lists only "
+        f"{', '.join(allowed)} among {gfx} GPUs"
     )
 
 

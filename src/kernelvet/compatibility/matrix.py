@@ -16,6 +16,7 @@ was last re-checked. A reference that could not be re-checked is marked
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from importlib import resources
 from pathlib import Path
@@ -93,11 +94,29 @@ class OsEntry(BaseModel):
 
 
 class OsRestriction(BaseModel):
+    """GPUs that AMD supports on one OS. Exactly one of ``gpus``, ``except_gpus`` or ``gfx`` is set.
+
+    ``gpus`` / ``except_gpus`` name products from ``CompatibilityMatrix.gpus``, because GPUs that
+    share an LLVM target can differ (MI300X and MI300A on Debian 13). ``gfx`` is the schema 1 form.
+    """
+
     os: str  # "debian:13"
-    gfx: list[str]
+    gpus: list[str] = Field(default_factory=list)  # only these products are supported
+    except_gpus: list[str] = Field(default_factory=list)  # every listed product except these
+    gfx: list[str] = Field(default_factory=list)  # schema 1: only these LLVM targets
     note: str
     source: str
     ref: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _one_form(self) -> Self:
+        if sum(1 for x in (self.gpus, self.except_gpus, self.gfx) if x) != 1:
+            raise ValueError(f"restriction {self.os!r} needs exactly one of gpus, except_gpus or gfx")
+        return self
+
+    def allows(self, product: str) -> bool:
+        """Whether a product named in the matrix is supported on this OS (product forms only)."""
+        return product in self.gpus if self.gpus else product not in self.except_gpus
 
 
 class FrameworkEntry(BaseModel):
@@ -140,6 +159,11 @@ class CompatibilityMatrix(BaseModel):
         unknown = sorted({k for refs in self.rule_refs().values() for k in refs} - set(self.references))
         if unknown:
             raise ValueError(f"rules refer to undefined references: {', '.join(unknown)}")
+        products = {g.name for g in self.gpus}
+        for res in self.os_gpu_restrictions:
+            missing = [n for n in [*res.gpus, *res.except_gpus] if n not in products]
+            if missing:
+                raise ValueError(f"restriction {res.os!r} names GPUs not in gpus: {', '.join(missing)}")
         return self
 
     def rule_refs(self) -> dict[str, list[str]]:
@@ -169,6 +193,24 @@ class CompatibilityMatrix(BaseModel):
 
     def entries_for_gfx(self, gfx: str) -> list[GpuEntry]:
         return [g for g in self.gpus if g.gfx == gfx]
+
+    def identify_gpu(self, gfx: str, marketing_name: str | None) -> GpuEntry | None:
+        """The matrix product a detected GPU is, by name, among the entries for its LLVM target.
+
+        A product matches when its name's words start the detected name ("AMD Instinct MI300X" matches
+        "AMD Instinct MI300X OAM" but "AMD Instinct MI250" does not match "AMD Instinct MI250X"). The
+        longest match wins. ``None`` when the name is missing or matches nothing.
+        """
+
+        def words(s: str) -> list[str]:
+            w = re.findall(r"[a-z0-9]+", s.lower())
+            return w[1:] if w[:1] == ["amd"] else w
+
+        if not marketing_name:
+            return None
+        detected = words(marketing_name)
+        hits = [e for e in self.entries_for_gfx(gfx) if detected[: len(words(e.name))] == words(e.name)]
+        return max(hits, key=lambda e: len(words(e.name)), default=None)
 
     def class_for_gfx(self, gfx: str | None) -> GpuClass | None:
         if not gfx:

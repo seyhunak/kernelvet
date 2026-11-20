@@ -206,6 +206,118 @@ def test_os_restricted_to_specific_gpus() -> None:
     assert validate_os(inp(h=host("rhel", "8.10", "4.18.0-553")), M).status is CheckStatus.PASS
 
 
+@pytest.mark.parametrize(
+    "os_id,ver,gfx,name,expected",
+    [
+        # Debian 13: MI355X/MI350X/MI325X/MI300X only; MI300A shares gfx942 but is excluded
+        ("debian", "13", "gfx942", "AMD Instinct MI300X", CheckStatus.PASS),
+        ("debian", "13", "gfx942", "AMD Instinct MI300A", CheckStatus.WARNING),
+        ("debian", "13", "gfx90a", "AMD Instinct MI250X", CheckStatus.WARNING),
+        # Debian 12: not MI100; MI210 counts (7.14 footnote) although the 10.1.0 matrix omits it
+        ("debian", "12", "gfx908", "AMD Instinct MI100", CheckStatus.WARNING),
+        ("debian", "12", "gfx90a", "AMD Instinct MI210", CheckStatus.PASS),
+        # RHEL 8.10: not MI325X; MI355X counts (10.1.0 matrix) although 7.14 excludes it
+        ("rhel", "8.10", "gfx942", "AMD Instinct MI325X", CheckStatus.WARNING),
+        ("rhel", "8.10", "gfx950", "AMD Instinct MI355X", CheckStatus.PASS),
+        # RHEL 10.1 / 9.7: everything except Radeon PRO V620
+        ("rhel", "10.1", "gfx1030", "AMD Radeon PRO V620", CheckStatus.WARNING),
+        ("rhel", "10.1", "gfx1030", "AMD Radeon PRO W6800", CheckStatus.PASS),
+        ("rhel", "9.7", "gfx1030", "AMD Radeon PRO V620", CheckStatus.WARNING),
+        ("rhel", "10.1", "gfx942", "AMD Instinct MI300X", CheckStatus.PASS),
+        # SLES 16.0: not MI100; SLES 15 SP7 has no restriction
+        ("sles", "16.0", "gfx908", "AMD Instinct MI100", CheckStatus.WARNING),
+        ("sles", "15.7", "gfx908", "AMD Instinct MI100", CheckStatus.PASS),
+        # Rocky 9: MI300X/MI300A only. Oracle Linux 10/9: MI355X/MI350X/MI325X/MI300X. OL 8: MI300X
+        ("rocky", "9.5", "gfx942", "AMD Instinct MI300A", CheckStatus.PASS),
+        ("rocky", "9.5", "gfx942", "AMD Instinct MI325X", CheckStatus.WARNING),
+        ("ol", "9.4", "gfx942", "AMD Instinct MI300A", CheckStatus.WARNING),
+        ("ol", "10.0", "gfx942", "AMD Instinct MI325X", CheckStatus.PASS),
+        ("ol", "8.10", "gfx942", "AMD Instinct MI300X", CheckStatus.PASS),
+        ("ol", "8.10", "gfx942", "AMD Instinct MI325X", CheckStatus.WARNING),
+    ],
+)
+def test_os_gpu_restrictions_per_product(
+    os_id: str, ver: str, gfx: str, name: str, expected: CheckStatus
+) -> None:
+    r = validate_os(inp(h=host(os_id, ver, "6.12.0"), g=[gpu(gfx, name)]), M)
+    assert r.status is expected, (r.summary, r.detail)
+    if expected is CheckStatus.WARNING:
+        assert "restricted to specific GPUs" in r.summary
+        assert name in r.detail and "AMD: " in r.detail
+
+
+def test_os_restriction_with_unidentified_product_is_a_warning_not_a_pass() -> None:
+    # gfx942 is MI325X, MI300X or MI300A; only some are listed for Debian 13
+    r = validate_os(inp(h=host("debian", "13", "6.12.0"), g=[gpu("gfx942", "")]), M)
+    assert r.status is CheckStatus.WARNING
+    assert "could not tell which product" in r.detail and "AMD Instinct MI300X" in r.detail
+    # gfx950 is MI355X or MI350X, both listed for Debian 13: no need to identify it
+    r = validate_os(inp(h=host("debian", "13", "6.12.0"), g=[gpu("gfx950", "")]), M)
+    assert r.status is CheckStatus.PASS
+
+
+def test_os_restriction_cites_both_amd_pages() -> None:
+    r = validate_os(inp(h=host("debian", "13", "6.12.0"), g=[gpu("gfx942", "AMD Instinct MI300A")]), M)
+    assert "per-GPU-series cells" in (r.source or "")
+    assert "Footnotes [9]-[17]" in (r.source or "")
+
+
+@pytest.mark.parametrize(
+    "gfx,detected,product",
+    [
+        ("gfx942", "AMD Instinct MI300X", "AMD Instinct MI300X"),
+        ("gfx942", "AMD Instinct MI300X OAM", "AMD Instinct MI300X"),
+        ("gfx942", "Instinct MI300A", "AMD Instinct MI300A"),
+        ("gfx90a", "AMD Instinct MI250X", "AMD Instinct MI250X"),
+        ("gfx90a", "AMD Instinct MI250", "AMD Instinct MI250"),
+        ("gfx1100", "AMD Radeon PRO W7800 48GB", "AMD Radeon PRO W7800 48GB"),
+        ("gfx1100", "AMD Radeon PRO W7800", "AMD Radeon PRO W7800"),
+        ("gfx942", "AMD Instinct MI300", None),  # a series name is not a product
+        ("gfx942", None, None),
+        ("gfx90a", "AMD Instinct MI300X", None),  # name and target disagree
+    ],
+)
+def test_identify_gpu(gfx: str, detected: str | None, product: str | None) -> None:
+    e = M.identify_gpu(gfx, detected)
+    assert (e.name if e else None) == product
+
+
+def test_every_restriction_names_known_products_and_one_form() -> None:
+    products = {g.name for g in M.gpus}
+    for r in M.os_gpu_restrictions:
+        assert bool(r.gpus) != bool(r.except_gpus) and not r.gfx, r.os
+        assert set(r.gpus + r.except_gpus) <= products, r.os
+    assert len({r.os for r in M.os_gpu_restrictions}) == len(M.os_gpu_restrictions)
+
+
+def test_restriction_naming_an_unknown_gpu_is_rejected(tmp_path: Path) -> None:
+    from kernelvet.compatibility.matrix import MatrixError
+
+    data = _bundled_matrix_data()
+    data["os_gpu_restrictions"][0]["except_gpus"] = ["AMD Radeon PRO V999"]
+    p = tmp_path / "m.json"
+    p.write_text(json.dumps(data))
+    with pytest.raises(MatrixError, match="names GPUs not in gpus: AMD Radeon PRO V999"):
+        load_matrix(p)
+    data["os_gpu_restrictions"][0]["gpus"] = ["AMD Instinct MI300X"]
+    p.write_text(json.dumps(data))
+    with pytest.raises(MatrixError, match="exactly one of gpus, except_gpus or gfx"):
+        load_matrix(p)
+
+
+def test_schema_1_gfx_restriction_still_works(tmp_path: Path) -> None:
+    data = _bundled_matrix_data()
+    data["os_gpu_restrictions"] = [
+        {"os": "debian:13", "gfx": ["gfx950", "gfx942"], "note": "old form", "source": "sysreq"}
+    ]
+    p = tmp_path / "m.json"
+    p.write_text(json.dumps(data))
+    m = load_matrix(p)
+    h = host("debian", "13", "6.12.0")
+    assert validate_os(inp(h=h, g=[gpu("gfx942", "AMD Instinct MI300A")]), m).status is CheckStatus.PASS
+    assert validate_os(inp(h=h, g=[gpu("gfx90a", "AMD Instinct MI250X")]), m).status is CheckStatus.WARNING
+
+
 def test_kernel() -> None:
     assert validate_kernel(inp(), M).status is CheckStatus.PASS
     assert validate_kernel(inp(h=host(kernel="6.5.0-14-generic")), M).status is CheckStatus.WARNING

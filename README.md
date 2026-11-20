@@ -241,6 +241,11 @@ The bundled matrix is
   into the file's `notes` instead of being resolved silently.
 * A value earns PASS only if AMD lists it explicitly. Unlisted values are
   WARNING, and known incompatibilities are FAIL.
+* OS support that AMD limits to certain GPUs (for example Debian 13, Rocky
+  Linux 9, Oracle Linux, RHEL 8.10, SLES 16.0, and RHEL 10.1/9.7 without the
+  Radeon PRO V620) is checked per product, because GPUs with the same LLVM
+  target can differ. When KernelVet cannot tell which product a GPU is and the
+  answer depends on it, the result is WARNING, never PASS.
 
 To use your own matrix, pass `--matrix FILE` or set `compatibility_matrix`.
 

@@ -62,6 +62,17 @@
       "verification": "verified",
       "verified_on": "2026-11-20"
     },
+    "matrix-os-by-gpu": {
+      "source": "matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.1.0/compatibility/compatibility-matrix.html#system-requirements-and-information",
+      "page": "ROCm 10.1.0 compatibility matrix",
+      "section": "System requirements and information",
+      "detail": "Instinct and Radeon tables: per-GPU-series cells of the 'Supported ... versions' rows (each cell names the GPUs it applies to)",
+      "rocm_version": "10.1.0",
+      "retrieved": "2026-11-18",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
     "matrix-amdgpu": {
       "source": "matrix",
       "url": "https://rocm.docs.amd.com/en/docs-10.1.0/compatibility/compatibility-matrix.html#system-requirements-and-information",
@@ -144,6 +155,7 @@
     "Transcribed by hand from the pages above on the retrieval date. Always confirm against the live AMD documentation before relying on a result.",
     "Every rule carries a 'ref' list naming entries in 'references': the exact page, section and row, the ROCm version that page describes, the transcription date and the date the rule was last re-checked against that page. A reference that could not be re-checked has verification 'unverified' and says why.",
     "The system-requirements page (7.14-era) and the 10.1.0 compatibility matrix disagree on some OS point releases (e.g. Ubuntu 24.04.4 vs 24.04.5). Both are recorded and either source counts as a match.",
+    "os_gpu_restrictions name individual products, because GPUs that share an LLVM target can differ (e.g. MI300X and MI300A on Debian 13). Where the 10.1.0 matrix and the 7.14 system requirements disagree about a GPU on an OS, the GPU counts as supported if either page lists it, the same rule as for the OS lists.",
     "Some GPU-to-target mappings in the 10.1.0 matrix (Radeon series rows, Ryzen APUs) were ambiguous in the published table; those targets are listed under targets_uncertain and produce WARNING, never PASS.",
     "Per AMD: if a GPU is not listed it is not officially supported."
   ],
@@ -170,7 +182,7 @@
     {"name": "AMD Radeon PRO W7800", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
     {"name": "AMD Radeon PRO W7700", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
     {"name": "AMD Radeon PRO W6800", "class": "radeon", "arch": "RDNA2", "gfx": "gfx1030", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
-    {"name": "AMD Radeon PRO V620", "class": "radeon", "arch": "RDNA2", "gfx": "gfx1030", "status": "supported", "source": "sysreq", "note": "Ubuntu 24.04.4 and 22.04.5 only", "ref": ["sysreq-gpus", "matrix-gpus", "sysreq-gpu-footnotes"]},
+    {"name": "AMD Radeon PRO V620", "class": "radeon", "arch": "RDNA2", "gfx": "gfx1030", "status": "supported", "source": "sysreq", "note": "7.14 system requirements: Ubuntu 24.04.4 and 22.04.5 only; the 10.1.0 matrix also lists Ubuntu 26.04.1 and RHEL 10.2/9.8", "ref": ["sysreq-gpus", "matrix-gpus", "sysreq-gpu-footnotes", "matrix-os-by-gpu"]},
     {"name": "AMD Radeon PRO VII", "class": "radeon", "arch": "GCN5.1", "gfx": "gfx906", "status": "unsupported", "source": "sysreq", "ref": ["sysreq-gpus"]},
     {"name": "AMD Radeon RX 9070 XT", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
     {"name": "AMD Radeon RX 9070 GRE", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
@@ -228,9 +240,16 @@
     ]
   },
   "os_gpu_restrictions": [
-    {"os": "debian:13", "gfx": ["gfx950", "gfx942"], "note": "Debian 13: MI355X/MI350X/MI325X/MI300X only", "source": "sysreq", "ref": ["sysreq-os-footnotes"]},
-    {"os": "rocky:9", "gfx": ["gfx942"], "note": "Rocky Linux 9: MI300X/MI300A only", "source": "sysreq", "ref": ["sysreq-os-footnotes"]},
-    {"os": "rhel:8.10", "gfx": ["gfx942", "gfx90a", "gfx908"], "note": "RHEL 8.10: MI300X/MI300A/MI250X/MI250/MI210/MI100 only", "source": "sysreq", "ref": ["sysreq-os-footnotes"]}
+    {"os": "rhel:10.1", "except_gpus": ["AMD Radeon PRO V620"], "source": "sysreq", "ref": ["sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "RHEL 10.1: every listed GPU except Radeon PRO V620 (7.14 system requirements, footnotes [8], [9]). Not listed in the 10.1.0 matrix."},
+    {"os": "rhel:9.7", "except_gpus": ["AMD Radeon PRO V620"], "source": "sysreq", "ref": ["sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "RHEL 9.7: every listed GPU except Radeon PRO V620 (7.14 system requirements, footnotes [8], [9]). Not listed in the 10.1.0 matrix."},
+    {"os": "rhel:8.10", "gpus": ["AMD Instinct MI355X", "AMD Instinct MI350X", "AMD Instinct MI300X", "AMD Instinct MI300A", "AMD Instinct MI250X", "AMD Instinct MI250", "AMD Instinct MI210", "AMD Instinct MI100"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "RHEL 8.10: not MI325X (both pages). The 10.1.0 matrix also lists MI355X/MI350X; the 7.14 system requirements (footnotes [1], [11]) do not. Either page counts."},
+    {"os": "sles:16.0", "except_gpus": ["AMD Instinct MI100"], "source": "matrix", "ref": ["matrix-os-by-gpu"], "note": "SLES 16.0: every Instinct GPU except MI100 (10.1.0 matrix). Not listed in the 7.14 system requirements."},
+    {"os": "debian:13", "gpus": ["AMD Instinct MI355X", "AMD Instinct MI350X", "AMD Instinct MI325X", "AMD Instinct MI300X"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Debian 13: MI355X/MI350X/MI325X/MI300X only (10.1.0 matrix; 7.14 footnote [13])."},
+    {"os": "debian:12", "gpus": ["AMD Instinct MI355X", "AMD Instinct MI350X", "AMD Instinct MI325X", "AMD Instinct MI300X", "AMD Instinct MI300A", "AMD Instinct MI250X", "AMD Instinct MI250", "AMD Instinct MI210"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Debian 12: not MI100 (both pages). The 10.1.0 matrix lists MI355X/MI350X but not MI210; 7.14 footnote [14] lists MI210 but not MI355X/MI350X. Either page counts."},
+    {"os": "rocky:9", "gpus": ["AMD Instinct MI300X", "AMD Instinct MI300A"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Rocky Linux 9: MI300X/MI300A only (10.1.0 matrix; 7.14 footnote [15])."},
+    {"os": "ol:10", "gpus": ["AMD Instinct MI355X", "AMD Instinct MI350X", "AMD Instinct MI325X", "AMD Instinct MI300X"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Oracle Linux 10: MI355X/MI350X/MI325X/MI300X only (10.1.0 matrix; 7.14 footnote [16])."},
+    {"os": "ol:9", "gpus": ["AMD Instinct MI355X", "AMD Instinct MI350X", "AMD Instinct MI325X", "AMD Instinct MI300X"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Oracle Linux 9: MI355X/MI350X/MI325X/MI300X only (10.1.0 matrix; 7.14 footnote [16])."},
+    {"os": "ol:8", "gpus": ["AMD Instinct MI300X"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Oracle Linux 8: MI300X only (10.1.0 matrix; 7.14 footnote [17])."}
   ],
   "amdgpu_driver": {
     "instinct": [

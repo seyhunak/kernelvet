@@ -59,6 +59,14 @@ Validators pass the refs behind each decision to `CompatibilityMatrix.cite()`,
 so a check's `source` names the exact AMD section. Schema 1 files (no refs)
 still load and cite page-level URLs.
 
+**Per-product OS limits.** `os_gpu_restrictions` name products (`gpus` or
+`except_gpus`), not LLVM targets, because MI300X and MI300A (both gfx942)
+differ on Debian 13 and Oracle Linux. `CompatibilityMatrix.identify_gpu`
+matches the detected marketing name against the products for that target, word
+by word with the longest match winning, so "MI250" never matches "MI250X". An
+unidentified GPU passes only if every product with its target is allowed;
+otherwise the result is WARNING. The schema 1 `gfx` form still works.
+
 **Skip, don't guess.** If a tool or device is missing, the checks that need it
 become SKIPPED, each with a reason. When one step of the HIP probe fails
 (init → enumerate → alloc → h2d → kernel → d2h → verify), every later step is
