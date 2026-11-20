@@ -1,0 +1,40 @@
+name: Bug report
+description: Something KernelVet reported or did is wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! Please remove hostnames, serial numbers, tokens and private paths before pasting output.
+  - type: input
+    id: version
+    attributes:
+      label: kernelvet version
+      description: Output of `kernelvet --version`
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command you ran
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: diagnosis
+    attributes:
+      label: Diagnosis
+      description: "`kernelvet diagnose --format json` (redact anything private)"
+      render: json
+  - type: textarea
+    id: tools
+    attributes:
+      label: Raw tool output (if detection is wrong)
+      description: "`rocminfo`, `amd-smi static --json`, `hipcc --version`. Recordings from real hardware help us build test fixtures."
+      render: text
