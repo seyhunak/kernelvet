@@ -1,0 +1,347 @@
+{
+  "schema": 2,
+  "rocm_version": "10.2.0",
+  "retrieved": "2026-11-20",
+  "sources": {
+    "sysreq": {
+      "title": "ROCm system requirements (Linux)",
+      "url": "https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html",
+      "page_date": "2026-07-15",
+      "describes": "7.14.x",
+      "retrieved": "2026-11-18",
+      "note": "On 2026-11-20 this URL serves the 7.14-era page with an immediate meta refresh to the latest compatibility matrix: a browser lands on the matrix, but the page source still contains the tables transcribed here, and every sysreq-sourced rule was re-checked against it. It still describes 7.14 after ROCm 10.2.0 was released, so its rules are kept, but facts only it lists count as PASS only on a ROCm 7.14 host (see notes). Versioned copies (docs-7.14.0, docs-7.14.1) return HTTP 404. The page_date was recorded on 2026-11-18 and is no longer shown on the page."
+    },
+    "matrix": {
+      "title": "ROCm 10.2.0 compatibility matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.2.0/compatibility/compatibility-matrix.html",
+      "page_date": "2026-08-26",
+      "describes": "10.2.0",
+      "latest_url": "https://rocm.docs.amd.com/en/latest/compatibility/compatibility-matrix.html",
+      "retrieved": "2026-11-20",
+      "note": "Transcribed on 2026-11-20 from the versioned 10.2.0 page (the latest_url showed the same matrix that day). The page source holds every GPU/OS combination of the interactive selector; each rule was taken from those cells. The page shows the date 2026-08-26, the same date the 10.1.0 page showed, so it is not the 10.2.0 publication date. This snapshot replaces the 10.1.0 one transcribed on 2026-11-18."
+    },
+    "matrix-10.1.0": {
+      "title": "ROCm 10.1.0 compatibility matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.1.0/compatibility/compatibility-matrix.html",
+      "describes": "10.1.0",
+      "retrieved": "2026-11-20",
+      "note": "Used only for the HIP version this release ships (hip_versions): HIP 7.16.0, from its 'ROCm Core SDK components' table."
+    },
+    "matrix-10.0.0": {
+      "title": "ROCm 10.0.0 compatibility matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.0.0/compatibility/compatibility-matrix.html",
+      "describes": "10.0.0",
+      "retrieved": "2026-11-20",
+      "note": "Used only for the HIP version this release ships (hip_versions): HIP 7.15.0, from its 'ROCm Core SDK components' table."
+    },
+    "releases": {
+      "title": "ROCm release history",
+      "url": "https://rocm.docs.amd.com/en/latest/release/versions.html",
+      "describes": "latest listed release 10.2.0 (2026-11-18)",
+      "retrieved": "2026-11-20",
+      "note": "On 2026-11-20 the page lists 10.2.0 (November 18, 2026), 10.1.0, 10.0.0, 7.14.1 and 7.14.0 as the most recent releases."
+    }
+  },
+  "references": {
+    "matrix-gpus": {
+      "source": "matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.2.0/compatibility/compatibility-matrix.html#system-requirements-and-information",
+      "page": "ROCm 10.2.0 compatibility matrix",
+      "section": "System requirements and information",
+      "detail": "Device family selector: 'Instinct GPU' and 'Radeon GPU' lists (product name and LLVM target)",
+      "rocm_version": "10.2.0",
+      "retrieved": "2026-11-20",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "matrix-ryzen-apus": {
+      "source": "matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.2.0/compatibility/compatibility-matrix.html#system-requirements-and-information",
+      "page": "ROCm 10.2.0 compatibility matrix",
+      "section": "System requirements and information",
+      "detail": "Device family selector: 'Ryzen APU' list (product name, iGPU and LLVM target)",
+      "rocm_version": "10.2.0",
+      "retrieved": "2026-11-20",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "matrix-os": {
+      "source": "matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.2.0/compatibility/compatibility-matrix.html#system-requirements-and-information",
+      "page": "ROCm 10.2.0 compatibility matrix",
+      "section": "System requirements and information",
+      "detail": "Rows 'Supported Ubuntu / Red Hat Enterprise Linux / SUSE Linux Enterprise Server / Debian / Oracle Linux / Rocky Linux versions' (with kernel)",
+      "rocm_version": "10.2.0",
+      "retrieved": "2026-11-20",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "matrix-os-by-gpu": {
+      "source": "matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.2.0/compatibility/compatibility-matrix.html#system-requirements-and-information",
+      "page": "ROCm 10.2.0 compatibility matrix",
+      "section": "System requirements and information",
+      "detail": "Instinct and Radeon tables: per-GPU-series cells of the 'Supported ... versions' rows (each cell names the GPUs it applies to)",
+      "rocm_version": "10.2.0",
+      "retrieved": "2026-11-20",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "matrix-amdgpu": {
+      "source": "matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.2.0/compatibility/compatibility-matrix.html#system-requirements-and-information",
+      "page": "ROCm 10.2.0 compatibility matrix",
+      "section": "System requirements and information",
+      "detail": "Row 'Supported AMD GPU Driver (amdgpu) versions' (Instinct and Radeon selections)",
+      "rocm_version": "10.2.0",
+      "retrieved": "2026-11-20",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "matrix-frameworks": {
+      "source": "matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.2.0/compatibility/compatibility-matrix.html#ai-ecosystem-compatibility",
+      "page": "ROCm 10.2.0 compatibility matrix",
+      "section": "AI ecosystem compatibility",
+      "detail": "Framework table, 'Supported versions' column (PyTorch, JAX, TensorFlow; Linux rows)",
+      "rocm_version": "10.2.0",
+      "retrieved": "2026-11-20",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "matrix-components": {
+      "source": "matrix",
+      "url": "https://rocm.docs.amd.com/en/docs-10.2.0/compatibility/compatibility-matrix.html#rocm-core-sdk-components",
+      "page": "ROCm 10.2.0 compatibility matrix",
+      "section": "ROCm Core SDK components",
+      "detail": "Component table, row 'HIP 7.17.0'",
+      "rocm_version": "10.2.0",
+      "retrieved": "2026-11-20",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "matrix-components-10.1.0": {
+      "source": "matrix-10.1.0",
+      "url": "https://rocm.docs.amd.com/en/docs-10.1.0/compatibility/compatibility-matrix.html#rocm-core-sdk-components",
+      "page": "ROCm 10.1.0 compatibility matrix",
+      "section": "ROCm Core SDK components",
+      "detail": "Component table, row 'HIP 7.16.0'",
+      "rocm_version": "10.1.0",
+      "retrieved": "2026-11-20",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "matrix-components-10.0.0": {
+      "source": "matrix-10.0.0",
+      "url": "https://rocm.docs.amd.com/en/docs-10.0.0/compatibility/compatibility-matrix.html#rocm-core-sdk-components",
+      "page": "ROCm 10.0.0 compatibility matrix",
+      "section": "ROCm Core SDK components",
+      "detail": "Component table, row 'HIP 7.15.0'",
+      "rocm_version": "10.0.0",
+      "retrieved": "2026-11-20",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "sysreq-gpus": {
+      "source": "sysreq",
+      "url": "https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html#supported-gpus",
+      "page": "System requirements (Linux)",
+      "section": "Supported GPUs",
+      "detail": "Tables 'AMD Instinct GPU', 'AMD Radeon PRO GPU' and 'AMD Radeon GPU' (Architecture, LLVM target, Support)",
+      "rocm_version": "7.14.0",
+      "retrieved": "2026-11-18",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "sysreq-gpu-footnotes": {
+      "source": "sysreq",
+      "url": "https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html#supported-gpus",
+      "page": "System requirements (Linux)",
+      "section": "Supported GPUs",
+      "detail": "Footnotes [1]-[8] (per-GPU operating system limits)",
+      "rocm_version": "7.14.0",
+      "retrieved": "2026-11-18",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "sysreq-os": {
+      "source": "sysreq",
+      "url": "https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html#supported-operating-systems",
+      "page": "System requirements (Linux)",
+      "section": "Supported operating systems",
+      "detail": "Table 'Operating system / Kernel / Glibc / Support'",
+      "rocm_version": "7.14.0",
+      "retrieved": "2026-11-18",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "sysreq-os-footnotes": {
+      "source": "sysreq",
+      "url": "https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html#supported-operating-systems",
+      "page": "System requirements (Linux)",
+      "section": "Supported operating systems",
+      "detail": "Footnotes [9]-[17] (per-OS GPU limits)",
+      "rocm_version": "7.14.0",
+      "retrieved": "2026-11-18",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    },
+    "releases": {
+      "source": "releases",
+      "url": "https://rocm.docs.amd.com/en/latest/release/versions.html",
+      "page": "ROCm release history",
+      "section": "ROCm release history",
+      "detail": "Release table (version numbers)",
+      "rocm_version": "10.2.0",
+      "retrieved": "2026-11-20",
+      "verification": "verified",
+      "verified_on": "2026-11-20"
+    }
+  },
+  "notes": [
+    "Transcribed by hand from the pages above on the retrieval date. Always confirm against the live AMD documentation before relying on a result.",
+    "Every rule carries a 'ref' list naming entries in 'references': the exact page, section and row, the ROCm version that page describes, the transcription date and the date the rule was last re-checked against that page. A reference that could not be re-checked has verification 'unverified' and says why.",
+    "The system-requirements page still describes ROCm 7.14, while this snapshot describes 10.2.0. Facts only that page lists (OS entries with source 'sysreq', kernels_sysreq_only, gpus_sysreq_only: e.g. RHEL 10.1/9.7, Ubuntu 24.04 kernel 6.17, MI210 on Debian 12) count as PASS only on a host running ROCm 7.14; on any other host, or when ROCm is not detected, they give WARNING. Point-release labels that differ between the pages (Ubuntu 24.04.4 vs 24.04.5) are both recorded; OS releases are matched by major.minor.",
+    "os_gpu_restrictions name individual products, because GPUs that share an LLVM target can differ (e.g. MI300X and MI300A on Debian 13). Where the 10.2.0 matrix and the 7.14 system requirements disagree about a GPU on an OS, the matrix decides; a GPU only the 7.14 page lists is in gpus_sysreq_only and follows the rule above.",
+    "Ryzen APU targets are listed under targets_uncertain and produce WARNING, never PASS: the 10.2.0 matrix names each APU's LLVM target, but a detected iGPU name can map to more than one target (Radeon 840M is gfx1152 or gfx1153), and KernelVet does not model the APU operating-system and driver rows.",
+    "ROCm 10.x versions HIP separately from ROCm (ROCm 10.2.0 ships HIP 7.17.0). hip_versions records the HIP version each ROCm 10.x release lists in its 'ROCm Core SDK components' table.",
+    "Changes from the 10.1.0 snapshot (2026-11-18): the 10.2.0 matrix adds Instinct MI350P, Radeon PRO W7900D, RHEL 10.3, RHEL 9.9, SLES 16.1, amdgpu 31.70.0, PyTorch 2.15 and JAX 0.11.2; it drops amdgpu 30.20.1, 30.20.0 and 30.10.2 (Instinct) and 31.50.0 (Radeon), and lists only RHEL 10.3 and 9.9 for Radeon. MI350P, RX 9050, RX 9050 (4GB), RX 7600, Radeon AI PRO R9700S and R9600 were already in the 10.1.0 selector but missing from that snapshot; they are now included.",
+    "Per AMD: if a GPU is not listed it is not officially supported."
+  ],
+  "release_versions": ["10.2.0", "10.1.0", "10.0.0", "7.14.1", "7.14.0"],
+  "hip_versions": {"10.2.0": "7.17.0", "10.1.0": "7.16.0", "10.0.0": "7.15.0"},
+  "hip_versions_ref": ["matrix-components", "matrix-components-10.1.0", "matrix-components-10.0.0"],
+  "release_versions_ref": ["releases"],
+  "gpus": [
+    {"name": "AMD Instinct MI355X", "class": "instinct", "arch": "CDNA4", "gfx": "gfx950", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Instinct MI350X", "class": "instinct", "arch": "CDNA4", "gfx": "gfx950", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Instinct MI350P", "class": "instinct", "arch": "CDNA4", "gfx": "gfx950", "status": "supported", "source": "matrix", "ref": ["matrix-gpus"]},
+    {"name": "AMD Instinct MI325X", "class": "instinct", "arch": "CDNA3", "gfx": "gfx942", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Instinct MI300X", "class": "instinct", "arch": "CDNA3", "gfx": "gfx942", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Instinct MI300A", "class": "instinct", "arch": "CDNA3", "gfx": "gfx942", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Instinct MI250X", "class": "instinct", "arch": "CDNA2", "gfx": "gfx90a", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Instinct MI250", "class": "instinct", "arch": "CDNA2", "gfx": "gfx90a", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Instinct MI210", "class": "instinct", "arch": "CDNA2", "gfx": "gfx90a", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Instinct MI100", "class": "instinct", "arch": "CDNA", "gfx": "gfx908", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Instinct MI50", "class": "instinct", "arch": "GCN5.1", "gfx": "gfx906", "status": "unsupported", "source": "sysreq", "ref": ["sysreq-gpus"]},
+    {"name": "AMD Instinct MI25", "class": "instinct", "arch": "GCN5.0", "gfx": "gfx900", "status": "unsupported", "source": "sysreq", "ref": ["sysreq-gpus"]},
+    {"name": "AMD Radeon AI PRO R9700S", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "matrix", "ref": ["matrix-gpus"]},
+    {"name": "AMD Radeon AI PRO R9700", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon AI PRO R9600D", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon AI PRO R9600", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "matrix", "ref": ["matrix-gpus"]},
+    {"name": "AMD Radeon PRO V710", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon PRO W7900D", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "matrix", "ref": ["matrix-gpus"]},
+    {"name": "AMD Radeon PRO W7900 Dual Slot", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon PRO W7900", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon PRO W7800 48GB", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon PRO W7800", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon PRO W7700", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon PRO W6800", "class": "radeon", "arch": "RDNA2", "gfx": "gfx1030", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon PRO V620", "class": "radeon", "arch": "RDNA2", "gfx": "gfx1030", "status": "supported", "source": "sysreq", "note": "7.14 system requirements: Ubuntu 24.04.4 and 22.04.5 only; the 10.2.0 matrix also lists Ubuntu 26.04.1 and RHEL 10.3/9.9", "ref": ["sysreq-gpus", "matrix-gpus", "sysreq-gpu-footnotes", "matrix-os-by-gpu"]},
+    {"name": "AMD Radeon PRO VII", "class": "radeon", "arch": "GCN5.1", "gfx": "gfx906", "status": "unsupported", "source": "sysreq", "ref": ["sysreq-gpus"]},
+    {"name": "AMD Radeon RX 9070 XT", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 9070 GRE", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 9070", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1201", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 9060 XT LP", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1200", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 9060 XT", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1200", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 9060", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1200", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 9050", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1200", "status": "supported", "source": "matrix", "ref": ["matrix-gpus"]},
+    {"name": "AMD Radeon RX 9050 (4GB)", "class": "radeon", "arch": "RDNA4", "gfx": "gfx1200", "status": "supported", "source": "matrix", "ref": ["matrix-gpus"]},
+    {"name": "AMD Radeon RX 7900 XTX", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 7900 XT", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 7900 GRE", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1100", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 7800 XT", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 7700 XT", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 7700", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1101", "status": "supported", "source": "sysreq", "ref": ["sysreq-gpus", "matrix-gpus"]},
+    {"name": "AMD Radeon RX 7600", "class": "radeon", "arch": "RDNA3", "gfx": "gfx1102", "status": "supported", "source": "matrix", "ref": ["matrix-gpus"]},
+    {"name": "AMD Radeon VII", "class": "radeon", "arch": "GCN5.1", "gfx": "gfx906", "status": "unsupported", "source": "sysreq", "ref": ["sysreq-gpus"]}
+  ],
+  "targets_uncertain": {
+    "gfx1151": "listed for Ryzen AI Max APUs (Radeon 8040S-8065S) in the 10.2.0 matrix; KernelVet does not check APU support",
+    "gfx1150": "listed for Ryzen AI 300/400 APUs (Radeon 880M/890M) in the 10.2.0 matrix; KernelVet does not check APU support",
+    "gfx1152": "listed for Ryzen AI 300/400 APUs (Radeon 820M-860M) in the 10.2.0 matrix; KernelVet does not check APU support",
+    "gfx1153": "listed for Ryzen AI 400 APUs (Radeon 840M) in the 10.2.0 matrix; KernelVet does not check APU support",
+    "gfx1103": "listed for Ryzen 100/200 APUs (Radeon 740M-780M) in the 10.2.0 matrix; KernelVet does not check APU support"
+  },
+  "targets_uncertain_ref": ["matrix-ryzen-apus"],
+  "os": {
+    "instinct": [
+      {"id": "ubuntu", "version": "26.04", "label": "Ubuntu 26.04.1", "kernels": ["7.0"], "source": "matrix", "ref": ["matrix-os"]},
+      {"id": "ubuntu", "version": "24.04", "label": "Ubuntu 24.04.5 / 24.04.4", "kernels": ["6.8", "6.17"], "kernels_sysreq_only": ["6.17"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "ubuntu", "version": "22.04", "label": "Ubuntu 22.04.5", "kernels": ["5.15", "6.8"], "kernels_sysreq_only": ["6.8"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "rhel", "version": "10.3", "label": "RHEL 10.3", "kernels": ["6.12"], "source": "matrix", "ref": ["matrix-os"]},
+      {"id": "rhel", "version": "10.2", "label": "RHEL 10.2", "kernels": ["6.12"], "source": "matrix", "ref": ["matrix-os"]},
+      {"id": "rhel", "version": "10.1", "label": "RHEL 10.1", "kernels": ["6.12"], "source": "sysreq", "ref": ["sysreq-os"]},
+      {"id": "rhel", "version": "10.0", "label": "RHEL 10.0", "kernels": ["6.12"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "rhel", "version": "9.9", "label": "RHEL 9.9", "kernels": ["5.14"], "source": "matrix", "ref": ["matrix-os"]},
+      {"id": "rhel", "version": "9.8", "label": "RHEL 9.8", "kernels": ["5.14"], "source": "matrix", "ref": ["matrix-os"]},
+      {"id": "rhel", "version": "9.7", "label": "RHEL 9.7", "kernels": ["5.14"], "source": "sysreq", "ref": ["sysreq-os"]},
+      {"id": "rhel", "version": "9.6", "label": "RHEL 9.6", "kernels": ["5.14"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "rhel", "version": "9.4", "label": "RHEL 9.4", "kernels": ["5.14"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "rhel", "version": "8.10", "label": "RHEL 8.10", "kernels": ["4.18"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "sles", "version": "16.1", "label": "SLES 16.1", "kernels": ["6.12"], "source": "matrix", "ref": ["matrix-os"]},
+      {"id": "sles", "version": "16.0", "label": "SLES 16.0", "kernels": ["6.12"], "source": "matrix", "ref": ["matrix-os"]},
+      {"id": "sles", "version": "15.7", "label": "SLES 15 SP7", "kernels": ["6.4"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "debian", "version": "13", "label": "Debian 13", "kernels": ["6.12"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "debian", "version": "12", "label": "Debian 12", "kernels": ["6.1"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "rocky", "version": "9", "label": "Rocky Linux 9", "kernels": ["5.14"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "ol", "version": "10", "label": "Oracle Linux 10 (UEK)", "kernels": [], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "ol", "version": "9", "label": "Oracle Linux 9 (UEK)", "kernels": [], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "ol", "version": "8", "label": "Oracle Linux 8 (UEK)", "kernels": [], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]}
+    ],
+    "radeon": [
+      {"id": "ubuntu", "version": "26.04", "label": "Ubuntu 26.04.1", "kernels": ["7.0"], "source": "matrix", "ref": ["matrix-os"]},
+      {"id": "ubuntu", "version": "24.04", "label": "Ubuntu 24.04.5 / 24.04.4", "kernels": ["7.0", "6.8", "6.17"], "kernels_sysreq_only": ["6.8", "6.17"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "ubuntu", "version": "22.04", "label": "Ubuntu 22.04.5", "kernels": ["6.8", "5.15"], "kernels_sysreq_only": ["5.15"], "source": "matrix+sysreq", "ref": ["matrix-os", "sysreq-os"]},
+      {"id": "rhel", "version": "10.3", "label": "RHEL 10.3", "kernels": ["6.12"], "source": "matrix", "ref": ["matrix-os"]},
+      {"id": "rhel", "version": "10.1", "label": "RHEL 10.1", "kernels": ["6.12"], "source": "sysreq", "ref": ["sysreq-os"]},
+      {"id": "rhel", "version": "9.9", "label": "RHEL 9.9", "kernels": ["5.14"], "source": "matrix", "ref": ["matrix-os"]},
+      {"id": "rhel", "version": "9.7", "label": "RHEL 9.7", "kernels": ["5.14"], "source": "sysreq", "ref": ["sysreq-os"]}
+    ]
+  },
+  "os_gpu_restrictions": [
+    {"os": "rhel:10.1", "except_gpus": ["AMD Radeon PRO V620"], "source": "sysreq", "ref": ["sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "RHEL 10.1: every listed GPU except Radeon PRO V620 (7.14 system requirements, footnotes [8], [9]). Not listed in the 10.2.0 matrix."},
+    {"os": "rhel:9.7", "except_gpus": ["AMD Radeon PRO V620"], "source": "sysreq", "ref": ["sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "RHEL 9.7: every listed GPU except Radeon PRO V620 (7.14 system requirements, footnotes [8], [9]). Not listed in the 10.2.0 matrix."},
+    {"os": "rhel:10.0", "except_gpus": ["AMD Instinct MI350P"], "source": "matrix", "ref": ["matrix-os-by-gpu"], "note": "RHEL 10.0: every Instinct GPU except MI350P (10.2.0 matrix). Not listed for Radeon."},
+    {"os": "rhel:9.4", "except_gpus": ["AMD Instinct MI350P"], "source": "matrix", "ref": ["matrix-os-by-gpu"], "note": "RHEL 9.4: every Instinct GPU except MI350P (10.2.0 matrix). Not listed for Radeon."},
+    {"os": "ubuntu:22.04", "except_gpus": ["AMD Instinct MI350P"], "source": "matrix", "ref": ["matrix-os-by-gpu"], "note": "Ubuntu 22.04: every listed GPU except Instinct MI350P, which the 10.2.0 matrix lists for Ubuntu 26.04 and 24.04 only."},
+    {"os": "rhel:8.10", "gpus": ["AMD Instinct MI355X", "AMD Instinct MI350X", "AMD Instinct MI300X", "AMD Instinct MI300A", "AMD Instinct MI250X", "AMD Instinct MI250", "AMD Instinct MI210", "AMD Instinct MI100"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "RHEL 8.10: not MI325X or MI350P (10.2.0 matrix; the 7.14 system requirements also exclude MI325X). The 10.2.0 matrix also lists MI355X/MI350X; the 7.14 system requirements (footnotes [1], [11]) do not; the matrix is the current source, so they count."},
+    {"os": "sles:16.1", "except_gpus": ["AMD Instinct MI100"], "source": "matrix", "ref": ["matrix-os-by-gpu"], "note": "SLES 16.1: every Instinct GPU except MI100 (10.2.0 matrix). Not listed in the 7.14 system requirements."},
+    {"os": "sles:16.0", "except_gpus": ["AMD Instinct MI100"], "source": "matrix", "ref": ["matrix-os-by-gpu"], "note": "SLES 16.0: every Instinct GPU except MI100 (10.2.0 matrix). Not listed in the 7.14 system requirements."},
+    {"os": "debian:13", "gpus": ["AMD Instinct MI355X", "AMD Instinct MI350X", "AMD Instinct MI350P", "AMD Instinct MI325X", "AMD Instinct MI300X"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Debian 13: MI355X/MI350X/MI350P/MI325X/MI300X only (10.2.0 matrix; 7.14 footnote [13] lists all but MI350P)."},
+    {"os": "debian:12", "gpus": ["AMD Instinct MI355X", "AMD Instinct MI350X", "AMD Instinct MI325X", "AMD Instinct MI300X", "AMD Instinct MI300A", "AMD Instinct MI250X", "AMD Instinct MI250", "AMD Instinct MI210"], "gpus_sysreq_only": ["AMD Instinct MI210"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Debian 12: not MI100 or MI350P (10.2.0 matrix; 7.14 footnote [14] also excludes MI100). The 10.2.0 matrix lists MI355X/MI350X but not MI210; 7.14 footnote [14] lists MI210 but not MI355X/MI350X, so MI210 is in gpus_sysreq_only."},
+    {"os": "rocky:9", "gpus": ["AMD Instinct MI300X", "AMD Instinct MI300A"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Rocky Linux 9: MI300X/MI300A only (10.2.0 matrix; 7.14 footnote [15])."},
+    {"os": "ol:10", "gpus": ["AMD Instinct MI355X", "AMD Instinct MI350X", "AMD Instinct MI325X", "AMD Instinct MI300X"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Oracle Linux 10: MI355X/MI350X/MI325X/MI300X only (10.2.0 matrix; 7.14 footnote [16])."},
+    {"os": "ol:9", "gpus": ["AMD Instinct MI355X", "AMD Instinct MI350X", "AMD Instinct MI325X", "AMD Instinct MI300X"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Oracle Linux 9: MI355X/MI350X/MI325X/MI300X only (10.2.0 matrix; 7.14 footnote [16])."},
+    {"os": "ol:8", "gpus": ["AMD Instinct MI300X"], "source": "matrix+sysreq", "ref": ["matrix-os-by-gpu", "sysreq-gpu-footnotes", "sysreq-os-footnotes"], "note": "Oracle Linux 8: MI300X only (10.2.0 matrix; 7.14 footnote [17])."}
+  ],
+  "amdgpu_driver": {
+    "instinct": [
+      "31.70.0",
+      "31.60.0",
+      "31.50.0",
+      "31.40.1",
+      "31.40.0",
+      "31.30.0",
+      "31.20.0",
+      "31.10.0",
+      "30.30.3",
+      "30.30.2",
+      "30.30.1",
+      "30.30.0"
+    ],
+    "radeon": [
+      "31.70.0",
+      "31.60.0"
+    ],
+    "source": "matrix",
+    "ref": [
+      "matrix-amdgpu"
+    ]
+  },
+  "frameworks": {
+    "pytorch": {"versions": ["2.15", "2.14", "2.13"], "source": "matrix", "ref": ["matrix-frameworks"]},
+    "jax": {"versions": ["0.11.2", "0.11.1", "0.10.2"], "source": "matrix", "ref": ["matrix-frameworks"]},
+    "tensorflow": {"versions": ["2.21", "2.20"], "source": "matrix", "ref": ["matrix-frameworks"]}
+  }
+}
