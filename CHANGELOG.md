@@ -7,6 +7,12 @@ include breaking changes.
 
 ## [Unreleased]
 
+### Added
+
+* User documentation in `docs/`: getting started, use cases, a command
+  reference, how CUDA-to-HIP migration works, diagnostics and compatibility,
+  reports and automation, and configuration. Linked from the README.
+
 ## [0.2.0] - 2026-11-20
 
 ### Added

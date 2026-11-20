@@ -15,6 +15,14 @@ checks whether a machine can really run ROCm workloads, and helps move CUDA
 projects to HIP using AMD's own tools. A command-line interface (`kernelvet`) and
 a keyboard-driven terminal UI (`kernelvet tui`) share one engine.
 
+**Documentation:** [Getting started](https://github.com/seyhunak/kernelvet/blob/main/docs/getting-started.md) ·
+[Use cases](https://github.com/seyhunak/kernelvet/blob/main/docs/use-cases.md) ·
+[Commands](https://github.com/seyhunak/kernelvet/blob/main/docs/commands.md) ·
+[CUDA→HIP migration](https://github.com/seyhunak/kernelvet/blob/main/docs/migration.md) ·
+[Diagnostics](https://github.com/seyhunak/kernelvet/blob/main/docs/diagnostics.md) ·
+[Reports](https://github.com/seyhunak/kernelvet/blob/main/docs/reports.md) ·
+[Configuration](https://github.com/seyhunak/kernelvet/blob/main/docs/configuration.md)
+
 > KernelVet is an independent open-source community project. It is **not
 > affiliated with, sponsored by or endorsed by AMD**, is not an AMD product, and is
 > not a certification authority. Always confirm support questions against the
@@ -272,6 +280,15 @@ Bug reports with real `rocminfo` / `amd-smi` output are very welcome.
 
 ## Documentation
 
+Full documentation is in [`docs/`](https://github.com/seyhunak/kernelvet/blob/main/docs/README.md):
+
+* [Getting started](https://github.com/seyhunak/kernelvet/blob/main/docs/getting-started.md): install and first checks
+* [Use cases](https://github.com/seyhunak/kernelvet/blob/main/docs/use-cases.md): recipes for common situations
+* [Command reference](https://github.com/seyhunak/kernelvet/blob/main/docs/commands.md): every command, option and exit code
+* [How CUDA-to-HIP migration works](https://github.com/seyhunak/kernelvet/blob/main/docs/migration.md): the pipeline, finding categories and verification stages
+* [Diagnostics and compatibility](https://github.com/seyhunak/kernelvet/blob/main/docs/diagnostics.md): what each check does and how much it proves
+* [Reports and automation](https://github.com/seyhunak/kernelvet/blob/main/docs/reports.md): output formats, JSON, SARIF and scripting
+* [Configuration](https://github.com/seyhunak/kernelvet/blob/main/docs/configuration.md): settings, environment variables and Docker isolation
 * [Architecture](https://github.com/seyhunak/kernelvet/blob/main/docs/architecture.md)
 * [Contributing](https://github.com/seyhunak/kernelvet/blob/main/CONTRIBUTING.md)
 * [Security policy](https://github.com/seyhunak/kernelvet/blob/main/SECURITY.md)
