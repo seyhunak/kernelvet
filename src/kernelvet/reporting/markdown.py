@@ -15,6 +15,7 @@ from kernelvet.models.report import (
 from kernelvet.models.system import GpuDevice, HostInfo, SoftwareInfo
 from kernelvet.reporting.common import (
     fmt_bytes,
+    gpu_cell,
     gpu_label,
     software_rows,
     stage_rows,
@@ -257,7 +258,7 @@ def migration_markdown(r: MigrationReport) -> str:
         if t.cases:
             lines += ["", "| Test | Status | GPU | Reference match |", "|---|---|---|---|"]
             lines += [
-                f"| {c.name} | {c.status} | {'yes' if c.ran_on_gpu else 'no'} | "
+                f"| {c.name} | {c.status} | {gpu_cell(c)} | "
                 f"{'' if c.expected_output_match is None else c.expected_output_match} |"
                 for c in t.cases
             ]

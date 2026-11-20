@@ -22,7 +22,9 @@ kernelvet --help
   * Never add a mock or placeholder that makes a feature *look* like it works.
   * Benchmark numbers come only from real runs.
 * **`evidence` matters.** `executed` means code really ran on the GPU;
-  `detected` means static inspection.
+  `detected` means static inspection. A GPU being present is never evidence
+  that something ran on it: migration tests count as GPU-executed only when the
+  HIP runtime log shows a successful kernel launch (`execution/runner.py`).
 * **Subprocesses** go through `HostContext.run`:
   * argv lists only, never shell strings,
   * a timeout on every call,

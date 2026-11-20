@@ -6,6 +6,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from kernelvet.models.common import Evidence
+
 
 class FindingCategory(StrEnum):
     AUTO_CONVERTIBLE = "AUTO_CONVERTIBLE"
@@ -213,6 +215,13 @@ class TestCaseResult(BaseModel):
     stderr: str = ""
     duration_s: float | None = None
     expected_output_match: bool | None = None  # compared against a reference file
+    # How we know whether the test ran code on the GPU:
+    #   executed = the HIP runtime log shows at least one kernel launch that returned hipSuccess
+    #   detected = an AMD GPU is present, but no successful kernel launch was observed
+    #   none     = no AMD GPU on the host
+    gpu_evidence: Evidence = Evidence.NONE
+    gpu_kernel_launches: int = 0
+    # True only for a PASSED test with gpu_evidence == executed; this is what GPU validation counts.
     ran_on_gpu: bool = False
 
 

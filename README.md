@@ -60,8 +60,10 @@ KernelVet is built to never claim more than it observed.
   5. GPU validation
 
   Passing one stage is never shown as passing a later one.
-* GPU validation passes only when the tests passed **and** at least one test ran
-  on a detected AMD GPU. On a CPU-only machine it is reported as **UNAVAILABLE**.
+* GPU validation passes only when the tests passed **and** at least one passing
+  test was seen launching a HIP kernel on an AMD GPU. KernelVet reads that from
+  the HIP runtime's own log; a GPU merely being present doesn't count. On a
+  CPU-only machine it is reported as **UNAVAILABLE**.
 * Benchmarks are never estimated or simulated.
 
 ## Hardware-verified vs inferred results

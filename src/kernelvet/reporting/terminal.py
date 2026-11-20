@@ -18,6 +18,7 @@ from kernelvet.models.report import (
 from kernelvet.models.system import GpuDevice, HostInfo, SoftwareInfo
 from kernelvet.reporting.common import (
     fmt_bytes,
+    gpu_cell,
     gpu_label,
     software_rows,
     stage_rows,
@@ -268,7 +269,7 @@ def render_migration(r: MigrationReport) -> RenderableType:
             t.add_row(
                 c.name,
                 Text(c.status, style=STAGE_STYLE[c.status]),
-                "yes" if c.ran_on_gpu else "no",
+                gpu_cell(c),
                 "" if c.expected_output_match is None else str(c.expected_output_match),
             )
         if tr.reason:

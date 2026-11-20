@@ -6,12 +6,19 @@
 * If ``<name>.expected`` / ``tests/expected/<name>.out`` exists, stdout is
   compared against it (reference output).
 
-``ran_on_gpu`` is only set when an AMD GPU was detected on the host; a passing
-test on a GPU-less host is never reported as GPU validation.
+GPU execution is observed, not assumed. Every test runs with the HIP runtime's
+API log switched on (``AMD_LOG_LEVEL=3``, ``AMD_LOG_MASK=0x1``), which writes
+each HIP API call and its result to stderr. A test only counts as having run on
+the GPU (``gpu_evidence = executed``, ``ran_on_gpu``) when an AMD GPU is present
+*and* its log shows at least one kernel launch that returned ``hipSuccess``. A
+passing test that never launched a kernel (CPU-only code, or a binary that does
+not use the HIP runtime) is ``detected``: the GPU is there, but nothing shows the
+test used it. Detecting a GPU is never treated as executing on it.
 """
 
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 
@@ -19,6 +26,7 @@ from kernelvet.diagnose.hardware import discover_gpus
 from kernelvet.execution.compiler import BUILD_SUBDIR
 from kernelvet.execution.sandbox import SandboxConfig, docker_argv
 from kernelvet.migration.scanner import TEST_PATH, scan_project
+from kernelvet.models.common import Evidence
 from kernelvet.models.migration import BuildResult, StageStatus, TestCaseResult, TestRunResult
 from kernelvet.utils.proc import HostContext
 
@@ -28,6 +36,37 @@ def _reference_for(project: Path, name: str, source: str | None) -> Path | None:
     if source:
         candidates.append(project / Path(source).with_suffix(".expected"))
     return next((c for c in candidates if c.is_file()), None)
+
+
+# HIP runtime (CLR) API logging: ``<api>: Returned <hipError> : ...`` for every call.
+HIP_LOG_ENV = {"AMD_LOG_LEVEL": "3", "AMD_LOG_MASK": "0x1"}
+
+# Launch APIs only. hipLaunchHostFunc and friends run host code and are deliberately excluded.
+_KERNEL_LAUNCH_OK = re.compile(
+    r"\b(?:hip(?:Ext|Hcc)?(?:Module)?Launch(?:Cooperative)?Kernel\w*"
+    r"|hipExtLaunchMultiKernelMultiDevice|hipGraphLaunch|hipLaunchByPtr)"
+    r"\s*:\s*Returned\s+hipSuccess\b"
+)
+
+
+# CLR log lines look like ``:3:hip_memory.cpp :1234: 5678 us: [pid:1 tid:0x..] hipMalloc ( ... )``.
+_HIP_LOG_LINE = re.compile(r"^:\d:.*$\n?", re.MULTILINE)
+
+
+def strip_hip_log(text: str) -> str:
+    """Drop HIP runtime log lines so stored output shows the test's own messages."""
+    return _HIP_LOG_LINE.sub("", text)
+
+
+def count_kernel_launches(log: str) -> int:
+    """Successful kernel launches recorded in a HIP runtime API log."""
+    return len(_KERNEL_LAUNCH_OK.findall(log))
+
+
+def _gpu_evidence(gpu_present: bool, launches: int) -> Evidence:
+    if not gpu_present:
+        return Evidence.NONE
+    return Evidence.EXECUTED if launches else Evidence.DETECTED
 
 
 def _normalise(text: str) -> str:
@@ -57,23 +96,30 @@ def run_tests(
     cfg = sandbox or SandboxConfig()
 
     def argv_for(cmd: list[str]) -> list[str]:
-        return docker_argv(project, cmd, cfg=cfg, gpu=True) if docker else cmd
+        return docker_argv(project, cmd, cfg=cfg, gpu=True, env=HIP_LOG_ENV) if docker else cmd
+
+    run_env = {**ctx.env, **HIP_LOG_ENV}
 
     cases: list[TestCaseResult] = []
     if build.method == "cmake" and (project / BUILD_SUBDIR / "cmake" / "CTestTestfile.cmake").exists():
-        cmd = ["ctest", "--test-dir", f"{BUILD_SUBDIR}/cmake", "--output-on-failure"]
+        # -V prints every test's output, so the HIP log of passing tests is captured too.
+        cmd = ["ctest", "--test-dir", f"{BUILD_SUBDIR}/cmake", "--output-on-failure", "-V"]
         t0 = time.monotonic()
-        r = ctx.run(argv_for(cmd), timeout=timeout, cwd=project)
+        r = ctx.run(argv_for(cmd), timeout=timeout, cwd=project, env=run_env)
+        launches = count_kernel_launches(r.stdout + r.stderr)
+        evidence = _gpu_evidence(gpu_present, launches)
         cases.append(
             TestCaseResult(
                 name="ctest",
                 command=cmd,
                 status=StageStatus.PASSED if r.ok else StageStatus.FAILED,
                 returncode=r.returncode,
-                stdout=r.stdout[-20000:],
-                stderr=r.stderr[-20000:],
+                stdout=strip_hip_log(r.stdout)[-20000:],
+                stderr=strip_hip_log(r.stderr)[-20000:],
                 duration_s=time.monotonic() - t0,
-                ran_on_gpu=gpu_present and r.ok,
+                gpu_evidence=evidence,
+                gpu_kernel_launches=launches,
+                ran_on_gpu=r.ok and evidence is Evidence.EXECUTED,
             )
         )
     else:
@@ -87,7 +133,9 @@ def run_tests(
                 continue
             cmd = [f"./{exe}"]
             t0 = time.monotonic()
-            r = ctx.run(argv_for(cmd), timeout=timeout, cwd=project)
+            r = ctx.run(argv_for(cmd), timeout=timeout, cwd=project, env=run_env)
+            launches = count_kernel_launches(r.stderr)
+            evidence = _gpu_evidence(gpu_present, launches)
             ref = _reference_for(project, name, src)
             match = None
             if ref is not None:
@@ -99,11 +147,13 @@ def run_tests(
                     command=cmd,
                     status=StageStatus.PASSED if ok else StageStatus.FAILED,
                     returncode=r.returncode,
-                    stdout=r.stdout[-20000:],
-                    stderr=r.stderr[-20000:],
+                    stdout=strip_hip_log(r.stdout)[-20000:],
+                    stderr=strip_hip_log(r.stderr)[-20000:],
                     duration_s=time.monotonic() - t0,
                     expected_output_match=match,
-                    ran_on_gpu=gpu_present and r.ok,
+                    gpu_evidence=evidence,
+                    gpu_kernel_launches=launches,
+                    ran_on_gpu=ok and evidence is Evidence.EXECUTED,
                 )
             )
     if not cases:
@@ -115,7 +165,15 @@ def run_tests(
             "use --all to run every built executable",
         )
     failed = any(c.status is StageStatus.FAILED for c in cases)
-    reason = None if gpu_present else ("no AMD GPU detected: results do not validate GPU execution")
+    if not gpu_present:
+        reason: str | None = "no AMD GPU detected: results do not validate GPU execution"
+    elif not any(c.ran_on_gpu for c in cases):
+        reason = (
+            "an AMD GPU is present, but no passing test launched a HIP kernel (checked in the HIP "
+            "runtime log): results do not validate GPU execution"
+        )
+    else:
+        reason = None
     return TestRunResult(
         project=str(project),
         status=StageStatus.FAILED if failed else StageStatus.PASSED,

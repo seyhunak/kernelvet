@@ -15,6 +15,17 @@ include breaking changes.
 
 ### Fixed
 
+* **GPU validation now requires observed GPU execution.** `migrate test` used
+  to mark every passing test as "ran on GPU" whenever an AMD GPU was detected,
+  so a test that never touched the GPU could pass stage 5. Tests now run with
+  the HIP runtime's API log on (`AMD_LOG_LEVEL=3`, `AMD_LOG_MASK=0x1`, passed
+  into Docker too). A test counts as running on the GPU only if the log shows a
+  kernel launch that returned `hipSuccess`. Each test records `gpu_evidence`
+  (`executed` / `detected` / `none`) and `gpu_kernel_launches`. Reports show
+  "ran on GPU (N kernel launches)", "GPU detected, no kernel launch seen" or
+  "no AMD GPU". Passing tests with no kernel launch leave stage 5 `NOT_RUN`,
+  with a recommendation. `ctest` now runs with `-V` so the log of passing tests
+  is captured.
 * Docker isolation now starts the container with `--platform=linux/amd64`.
   AMD's ROCm images are x86-64 only, so on Arm hosts (Apple Silicon)
   `migrate build`/`migrate test` with `isolation = docker` failed to pull the

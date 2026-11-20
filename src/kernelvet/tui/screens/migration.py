@@ -38,7 +38,7 @@ from kernelvet.migration.workflow import assemble_report, compute_stages, save_s
 from kernelvet.models.migration import Finding, FindingCategory, StageStatus
 from kernelvet.models.report import HIPIFY_DISCLAIMER, MigrationReport
 from kernelvet.reporting import OutputFormat, render_text
-from kernelvet.reporting.common import STAGE_LABELS, verification_note
+from kernelvet.reporting.common import STAGE_LABELS, gpu_cell, verification_note
 from kernelvet.tui.screens.base import Pane
 from kernelvet.tui.widgets.common import KeyValue, Panel, badge, category_text, reset_table
 from kernelvet.tui.workers import ui_progress
@@ -559,7 +559,7 @@ Filter findings by category with the selector on the Findings tab.
             t.add_row("build", badge(m.build.status), m.build.reason or " ".join(m.build.command)[:120])
         if m.tests:
             for c in m.tests.cases:
-                t.add_row(f"test: {c.name}", badge(c.status), f"GPU: {'yes' if c.ran_on_gpu else 'no'}")
+                t.add_row(f"test: {c.name}", badge(c.status), gpu_cell(c))
             if not m.tests.cases:
                 t.add_row("tests", badge(m.tests.status), m.tests.reason or "")
 

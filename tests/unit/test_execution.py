@@ -5,8 +5,10 @@ from pathlib import Path
 from conftest import FakeRunner, make_sysroot, mi300x_runner
 from kernelvet.benchmark.engine import BenchmarkOptions, parse_hip_bench, run_benchmarks
 from kernelvet.execution.compiler import build_project, generated_cmake, plan_direct_build
-from kernelvet.execution.runner import run_tests
+from kernelvet.execution.runner import HIP_LOG_ENV, count_kernel_launches, run_tests, strip_hip_log
 from kernelvet.execution.sandbox import SandboxConfig, docker_argv
+from kernelvet.migration.workflow import compute_stages
+from kernelvet.models.common import Evidence
 from kernelvet.models.migration import BuildResult, StageStatus
 from kernelvet.utils.proc import CommandResult, HostContext
 
@@ -144,7 +146,7 @@ def test_tests_compare_reference_output_on_gpu_host(tmp_path: Path) -> None:
     (proj / "tests/expected/test_scale.out").write_text("PASS\n")
     sysroot = make_sysroot(tmp_path / "root")
     r = mi300x_runner()
-    r.on(lambda a: a[0].startswith("./"), lambda a, kw: CommandResult(a, 0, stdout="PASS\n"))
+    r.on(lambda a: a[0].startswith("./"), lambda a, kw: CommandResult(a, 0, stdout="PASS\n", stderr=HIP_LOG))
     res = run_tests(HostContext(runner=r, root=sysroot, system="Linux"), proj, build)
     assert res.gpu_present and res.cases[0].expected_output_match is True and res.cases[0].ran_on_gpu
 
@@ -210,3 +212,82 @@ def test_skipped_benchmarks_mention_requested_options(empty_linux_ctx: HostConte
     assert hip.status == "SKIPPED" and hip.profiler and "not run" in hip.profiler
     assert "--profile" in (hip.reason or "")
     assert torch.status == "SKIPPED" and "--inference" in (torch.reason or "")
+
+
+# Shape of HIP runtime (CLR) API log lines with AMD_LOG_LEVEL=3, AMD_LOG_MASK=0x1.
+HIP_LOG = (
+    ":3:hip_memory.cpp            :1520: 1023 us: [pid:41 tid:0x7f01]  hipMalloc ( 0x7ffd, 4096 ) \n"
+    ":3:hip_memory.cpp            :1527: 1031 us: [pid:41 tid:0x7f01] hipMalloc: Returned hipSuccess : \n"
+    ":3:hip_platform.cpp          :221 : 1100 us: [pid:41 tid:0x7f01]  hipLaunchKernel ( 0x4012, {1,1,1} ) \n"
+    ":3:hip_platform.cpp          :229 : 1180 us: [pid:41 tid:0x7f01] hipLaunchKernel: Returned hipSuccess : \n"
+    ":3:hip_module.cpp            :480 : 1190 us: [pid:41 tid:0x7f01] hipModuleLaunchKernel: Returned hipSuccess : \n"
+)
+
+
+def test_count_kernel_launches_counts_only_successful_kernel_launches() -> None:
+    assert count_kernel_launches(HIP_LOG) == 2
+    noise = (
+        ":3:hip_platform.cpp :229 : 1 us: [pid:1 tid:0x1] hipLaunchKernel: Returned hipErrorInvalidDeviceFunction : \n"
+        ":3:hip_stream.cpp :90 : 2 us: [pid:1 tid:0x1] hipLaunchHostFunc: Returned hipSuccess : \n"
+        ":3:hip_memory.cpp :1527: 3 us: [pid:1 tid:0x1] hipMemcpy: Returned hipSuccess : \n"
+    )
+    assert count_kernel_launches(noise) == 0
+    assert count_kernel_launches("hipGraphLaunch: Returned hipSuccess") == 1
+
+
+def test_passing_test_without_kernel_launch_is_not_gpu_execution(tmp_path: Path) -> None:
+    proj, build = _built(tmp_path)
+    sysroot = make_sysroot(tmp_path / "root")
+    r = mi300x_runner()
+    seen: list[dict[str, str]] = []
+
+    def run(a: list[str], kw: dict[str, object]) -> CommandResult:
+        seen.append(dict(kw.get("env") or {}))  # type: ignore[call-overload]
+        return CommandResult(a, 0, stdout="PASS\n")
+
+    r.on(lambda a: a[0].startswith("./"), run)
+    res = run_tests(HostContext(runner=r, root=sysroot, system="Linux"), proj, build)
+    case = res.cases[0]
+    assert res.status is StageStatus.PASSED and res.gpu_present
+    assert case.gpu_evidence is Evidence.DETECTED and case.gpu_kernel_launches == 0 and not case.ran_on_gpu
+    assert "no passing test launched a HIP kernel" in (res.reason or "")
+    assert seen[0]["AMD_LOG_LEVEL"] == "3" and seen[0]["AMD_LOG_MASK"] == "0x1"
+    stages = compute_stages(None, None, build, res)
+    assert stages.tests is StageStatus.PASSED
+    assert stages.gpu_runtime_validation is StageStatus.NOT_RUN
+
+
+def test_observed_kernel_launch_is_gpu_execution(tmp_path: Path) -> None:
+    proj, build = _built(tmp_path)
+    sysroot = make_sysroot(tmp_path / "root")
+    r = mi300x_runner()
+    r.on(
+        lambda a: a[0].startswith("./"),
+        lambda a, kw: CommandResult(a, 0, stdout="PASS\n", stderr=HIP_LOG + "real warning\n"),
+    )
+    res = run_tests(HostContext(runner=r, root=sysroot, system="Linux"), proj, build)
+    case = res.cases[0]
+    assert case.gpu_evidence is Evidence.EXECUTED and case.gpu_kernel_launches == 2 and case.ran_on_gpu
+    assert case.stderr == "real warning\n"  # HIP log lines are not stored
+    assert res.reason is None
+    assert compute_stages(None, None, build, res).gpu_runtime_validation is StageStatus.PASSED
+
+
+def test_failing_test_with_kernel_launch_does_not_count_as_validation(tmp_path: Path) -> None:
+    proj, build = _built(tmp_path)
+    sysroot = make_sysroot(tmp_path / "root")
+    r = mi300x_runner()
+    r.on(lambda a: a[0].startswith("./"), lambda a, kw: CommandResult(a, 1, stdout="FAIL\n", stderr=HIP_LOG))
+    res = run_tests(HostContext(runner=r, root=sysroot, system="Linux"), proj, build)
+    assert res.cases[0].gpu_evidence is Evidence.EXECUTED and not res.cases[0].ran_on_gpu
+    assert compute_stages(None, None, build, res).gpu_runtime_validation is StageStatus.FAILED
+
+
+def test_docker_tests_pass_hip_log_env_into_container(tmp_path: Path) -> None:
+    argv = docker_argv(tmp_path, ["./t"], cfg=SandboxConfig(image="img"), gpu=True, env=HIP_LOG_ENV)
+    assert "AMD_LOG_LEVEL=3" in argv and argv[argv.index("AMD_LOG_LEVEL=3") - 1] == "-e"
+    assert argv.index("AMD_LOG_LEVEL=3") < argv.index("img")
+
+
+def test_strip_hip_log_keeps_other_lines() -> None:
+    assert strip_hip_log(HIP_LOG + "boom\n") == "boom\n"

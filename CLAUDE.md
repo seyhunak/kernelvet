@@ -43,7 +43,9 @@ docker run --rm -v "$PWD":/src:ro python:3.11-slim bash -c 'cp -r /src /w && cd 
 * Migration stages share state through `<hip-output>/.kernelvet/*.json`
   (`migration/workflow.save_state`/`load_state`). `compute_stages` derives the
   five verification stages from those files. GPU validation passes only if the
-  tests passed and a test ran on a detected AMD GPU.
+  tests passed and a passing test's HIP runtime log (`AMD_LOG_LEVEL=3`) showed a
+  successful kernel launch on a detected AMD GPU (`execution/runner.py`). A GPU
+  being present is not enough.
 * The CLI tests patch `HostContext` in each command module (see the
   `fake_host`/`bare_host` fixtures in `tests/integration/test_cli.py`). A new
   command module that builds its own `HostContext` must be added to that patch

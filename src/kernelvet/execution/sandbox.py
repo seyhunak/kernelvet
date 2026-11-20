@@ -15,6 +15,7 @@ manifest".
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -38,6 +39,7 @@ def docker_argv(
     cfg: SandboxConfig,
     gpu: bool = False,
     workdir: str = CONTAINER_WORKDIR,
+    env: Mapping[str, str] | None = None,
 ) -> list[str]:
     """Wrap ``command`` (relative to the project root) in ``docker run``."""
     argv = [
@@ -58,6 +60,8 @@ def docker_argv(
         "-w",
         workdir,
     ]
+    for key, value in (env or {}).items():
+        argv += ["-e", f"{key}={value}"]
     if gpu:
         argv += ["--device=/dev/kfd", "--device=/dev/dri", "--group-add=video", "--group-add=render"]
     return [*argv, cfg.image, *command]

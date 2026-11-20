@@ -221,10 +221,12 @@ kernelvet migrate test HIP_DIR [--all] [--isolation none|docker] [-f FORMAT] [-o
 ```
 
 Runs `ctest`, or the built test executables (`--all`: every executable).
-Compares output with reference files when present and records whether each test
-ran on an AMD GPU.
+Compares output with reference files when present. For each test it records
+whether the test was **seen launching a HIP kernel** on an AMD GPU, as opposed
+to a GPU just being present. See
+[GPU detection vs GPU execution](migration.md#gpu-detection-vs-gpu-execution).
 
-**Exit:** 0 tests passed on an AMD GPU · 3 passed but no AMD GPU (not validated) · 1 failed · 4 not built yet.
+**Exit:** 0 tests passed and ran kernels on an AMD GPU · 3 passed but GPU execution not shown (no AMD GPU, or no kernel launched) · 1 failed · 4 not built yet.
 
 ### migrate report
 

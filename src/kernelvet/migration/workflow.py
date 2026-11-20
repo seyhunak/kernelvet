@@ -81,6 +81,8 @@ def compute_stages(
             and any(c.ran_on_gpu for c in tests.cases)
         ):
             s.gpu_runtime_validation = StageStatus.PASSED
+        # Passed with a GPU present but no observed kernel launch: GPU execution is unproven,
+        # so stage 5 stays NOT_RUN (recommendations() explains why).
         elif tests.status is StageStatus.FAILED and tests.gpu_present:
             s.gpu_runtime_validation = StageStatus.FAILED
         elif not tests.gpu_present and tests.status is not StageStatus.NOT_RUN:
@@ -105,6 +107,16 @@ def recommendations(r: MigrationReport) -> list[str]:
         out.append("Compilation failed; read the compiler errors in the build section.")
     if st.compilation is StageStatus.UNAVAILABLE:
         out.append('Install the ROCm HIP SDK (hipcc) to compile, or set isolation = "docker".')
+    if (
+        r.tests
+        and r.tests.status is StageStatus.PASSED
+        and r.tests.gpu_present
+        and not any(c.ran_on_gpu for c in r.tests.cases)
+    ):
+        out.append(
+            "Tests passed, but none launched a HIP kernel, so GPU execution is not validated. "
+            "Add or run a test that exercises the migrated kernels (`--all` runs every executable)."
+        )
     if st.gpu_runtime_validation is StageStatus.UNAVAILABLE:
         out.append("Run `kernelvet migrate test` on a host with an AMD GPU to validate runtime behaviour.")
     return out

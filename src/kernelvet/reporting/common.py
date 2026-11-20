@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from kernelvet.diagnose.software import torch_summary
-from kernelvet.models.migration import StageStatus, VerificationStages
+from kernelvet.models.common import Evidence
+from kernelvet.models.migration import StageStatus, TestCaseResult, VerificationStages
 from kernelvet.models.system import GpuDevice, SoftwareInfo
 
 
@@ -72,3 +73,13 @@ def verification_note(stages: VerificationStages) -> str:
         f"Verified up to: {reached}. Later stages are not verified; "
         "do not treat earlier stages as proof of runtime correctness."
     )
+
+
+def gpu_cell(case: TestCaseResult) -> str:
+    """Per-test GPU evidence, worded so detection is never mistaken for execution."""
+    if case.gpu_evidence is Evidence.EXECUTED:
+        n = case.gpu_kernel_launches
+        return f"ran on GPU ({n} kernel launch{'es' if n != 1 else ''})"
+    if case.gpu_evidence is Evidence.DETECTED:
+        return "GPU detected, no kernel launch seen"
+    return "no AMD GPU"

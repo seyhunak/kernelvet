@@ -33,7 +33,7 @@ around it:
 | 3 | `kernelvet migrate convert CUDA_DIR -o HIP_DIR` | writes `HIP_DIR` only | `hipify-clang` or `hipify-perl` |
 | 4 | `kernelvet migrate audit HIP_DIR` | reads `HIP_DIR` | nothing |
 | 5 | `kernelvet migrate build HIP_DIR` | writes `HIP_DIR/.kernelvet/build` | `hipcc` (or Docker) |
-| 6 | `kernelvet migrate test HIP_DIR` | runs built executables | a successful build; an AMD GPU for GPU validation |
+| 6 | `kernelvet migrate test HIP_DIR` | runs built executables | a successful build; an AMD GPU and a test that launches a kernel for GPU validation |
 | 7 | `kernelvet migrate report HIP_DIR` | reads saved state | nothing |
 
 Each step can be run on its own, and the same steps are available in the TUI
@@ -149,8 +149,37 @@ runs in a container with no network and all Linux capabilities dropped.
   `test*` (`--all` runs every executable).
 
 If `<name>.expected` or `tests/expected/<name>.out` exists, the output is
-compared with it. Each test records whether it **ran on an AMD GPU**, which is
-only possible when an AMD GPU is detected on the host.
+compared with it.
+
+### GPU detection vs GPU execution
+
+A GPU being **detected** on the machine doesn't mean a test **executed** on it.
+A test binary can pass without ever touching the GPU, for example when it only
+runs CPU code. So KernelVet observes execution instead of assuming it:
+
+* Every test runs with the HIP runtime's API log switched on
+  (`AMD_LOG_LEVEL=3`, `AMD_LOG_MASK=0x1`, also inside Docker). This log records
+  every HIP call and its result.
+* A test **ran on GPU** only when an AMD GPU is present *and* its log shows at
+  least one kernel launch (`hipLaunchKernel`, `hipModuleLaunchKernel`,
+  `hipGraphLaunch`, …) that returned `hipSuccess`. The number of launches is
+  recorded.
+* A passing test with no successful kernel launch is shown as **GPU detected,
+  no kernel launch seen**, and doesn't count towards stage 5.
+* Without an AMD GPU, every test is **no AMD GPU**.
+
+In JSON, each test has `gpu_evidence` (`executed`, `detected` or `none`, the
+same values as diagnostics), `gpu_kernel_launches` and `ran_on_gpu`. The HIP
+log lines are removed from the stored test output.
+
+For `ctest` runs, all tests are run as one case, so the evidence applies to the
+whole `ctest` run, not to each test inside it.
+
+**Limits.** A successful launch shows that a kernel was dispatched to the GPU.
+It doesn't prove the kernel computed the right result; reference output files
+and the tests' own checks do that. A program that doesn't use the HIP runtime
+(for example one that calls the GPU only through OpenCL) is never shown as
+running on the GPU.
 
 ## 7. Report
 
@@ -169,7 +198,7 @@ Every migration report shows five separate stages:
 | 2. Static audit | no `MANUAL_INTERVENTION` or `UNSUPPORTED` findings remain | FAILED |
 | 3. Compilation | the build succeeded | FAILED, or UNAVAILABLE without `hipcc` |
 | 4. Tests | the tests passed | FAILED, or NOT_RUN |
-| 5. AMD GPU runtime validation | the tests passed **and** at least one ran on a detected AMD GPU | FAILED, or **UNAVAILABLE** on a host without an AMD GPU |
+| 5. AMD GPU runtime validation | the tests passed **and** at least one passing test was seen launching a HIP kernel on an AMD GPU | FAILED if tests failed on a GPU host; **NOT_RUN** if tests passed but none launched a kernel; **UNAVAILABLE** on a host without an AMD GPU |
 
 Passing an earlier stage is never shown as passing a later one, and stage 5 is
 never PASSED on a machine without an AMD GPU.
