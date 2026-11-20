@@ -7,6 +7,8 @@ include breaking changes.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-20
+
 ### Fixed
 
 * **Facts only the 7.14-era system-requirements page lists no longer give
@@ -237,7 +239,8 @@ First public release.
 - Not yet tested on real AMD GPU hardware: CI has no GPU runner, so the
   hardware paths have only been exercised against recorded-format fixtures.
 
-[Unreleased]: https://github.com/seyhunak/kernelvet/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/seyhunak/kernelvet/compare/v0.3.1...HEAD
+[0.3.1]: https://pypi.org/project/kernelvet/0.3.1/
 [0.3.0]: https://pypi.org/project/kernelvet/0.3.0/
 [0.2.0]: https://pypi.org/project/kernelvet/0.2.0/
 [0.1.1]: https://pypi.org/project/kernelvet/0.1.1/
