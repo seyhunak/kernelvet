@@ -46,6 +46,7 @@ from kernelvet.models.migration import (
 )
 from kernelvet.models.report import HIPIFY_DISCLAIMER, MigrationReport
 from kernelvet.reporting import OutputFormat
+from kernelvet.reporting.common import readiness_line
 from kernelvet.reporting.terminal import render_migration
 from kernelvet.utils.paths import PathError, existing_dir
 from kernelvet.utils.proc import HostContext
@@ -110,7 +111,9 @@ def analyze(
         cb("Scanning project", 0.3)
         analysis = analyze_project(root, compile_db=compile_commands)
     report = MigrationReport(project=str(root), analysis=analysis)
-    _record(root, "analyzed", f"readiness {analysis.readiness.score}/100, {len(analysis.findings)} findings")
+    _record(
+        root, "analyzed", f"readiness {readiness_line(analysis.readiness)}, {len(analysis.findings)} findings"
+    )
     emit(report, fmt, output, lambda: render_migration(report))
 
 

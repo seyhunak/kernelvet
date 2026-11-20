@@ -54,7 +54,7 @@ kernelvet migrate plan ./our-cuda-project
 
 The report lists every CUDA construct, grouped as auto-convertible, needs
 verification, manual work, or unsupported, plus the NVIDIA libraries in use and
-their ROCm counterparts. The readiness score says how much HIPIFY can convert
+their ROCm counterparts. The readiness score and level say how much HIPIFY can convert
 mechanically. It does not predict whether the result will be correct.
 `UNSUPPORTED` findings (inline PTX, CUTLASS, TensorRT, texture references) are
 the work to scope first.

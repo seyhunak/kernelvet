@@ -153,7 +153,7 @@ kernelvet migrate analyze CUDA_DIR [--compile-commands FILE] [-f FORMAT] [-o FIL
 Read-only. Builds the inventory (files, build systems, NVIDIA dependencies,
 tests), classifies every CUDA construct as `AUTO_CONVERTIBLE`,
 `REQUIRES_VERIFICATION`, `MANUAL_INTERVENTION` or `UNSUPPORTED`, and computes the
-readiness score. It also reports the project's `compile_commands.json` and
+[readiness score and level](migration.md#readiness-score). It also reports the project's `compile_commands.json` and
 which translation units it covers; see
 [Using compile_commands.json](migration.md#using-compile_commandsjson).
 `-f sarif` exports the findings for code-scanning tools.

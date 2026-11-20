@@ -38,7 +38,7 @@ from kernelvet.migration.workflow import assemble_report, compute_stages, save_s
 from kernelvet.models.migration import Finding, FindingCategory, StageStatus
 from kernelvet.models.report import HIPIFY_DISCLAIMER, MigrationReport
 from kernelvet.reporting import OutputFormat, render_text
-from kernelvet.reporting.common import STAGE_LABELS, gpu_cell, verification_note
+from kernelvet.reporting.common import STAGE_LABELS, gpu_cell, readiness_line, verification_note
 from kernelvet.tui.screens.base import Pane
 from kernelvet.tui.widgets.common import KeyValue, Panel, badge, category_text, reset_table
 from kernelvet.tui.workers import ui_progress
@@ -62,7 +62,9 @@ class MigrationPane(Pane):
 7. **Report** – export the combined report (JSON/Markdown/HTML/SARIF).
 
 Each action that cannot run on this host is disabled, and the reason is shown under the buttons.
-The readiness score measures *source conversion coverage only* – not correctness.
+The readiness score measures *source conversion coverage only* – not correctness. It counts
+each CUDA construct once per file in the source code (build files are listed, not scored), and
+the level says what kind of work is left: mechanical, review, manual-work or blocked.
 
 **Automated conversion is not guaranteed to produce working HIP code.** Review every
 converted file by hand, then build and test it on an AMD GPU.
@@ -229,7 +231,7 @@ Filter findings by category with the selector on the Findings tab.
                 ("Tests", f"{len(inv.test_files)} file(s)"),
                 (
                     "Readiness",
-                    Text(f"{r.score}/100", style="bold")
+                    Text(readiness_line(r), style="bold")
                     + Text("  source conversion coverage only — not correctness", style="dim"),
                 ),
                 ("Findings", ", ".join(f"{k}: {v}" for k, v in r.by_category.items())),
@@ -254,9 +256,9 @@ Filter findings by category with the selector on the Findings tab.
         self.render_findings()
         if not self.query_one("#mg-output", Input).value.strip():
             self.query_one("#mg-output", Input).value = str(root.parent / f"{root.name}-hip")
-        self.log_line(f"Found {len(analysis.findings)} findings; readiness {r.score}/100")
+        self.log_line(f"Found {len(analysis.findings)} findings; readiness {readiness_line(r)}")
         self._save_history(
-            "analyzed", f"readiness {r.score}/100, {len(analysis.findings)} findings", str(root)
+            "analyzed", f"readiness {readiness_line(r)}, {len(analysis.findings)} findings", str(root)
         )
         self._busy(False)
         self.render_stages()

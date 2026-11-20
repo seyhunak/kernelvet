@@ -101,15 +101,17 @@ def test_analysis_classifies_constructs(cuda_project: Path) -> None:
 
 def test_readiness_is_capped_by_unsupported_and_explained(cuda_project: Path) -> None:
     r = analyze_project(cuda_project).readiness
-    assert 0 < r.score <= 60
-    assert "not correctness" in r.explanation
+    assert r.score is not None and 0 < r.score <= 60
+    assert r.level == "blocked" and r.cap == 60 and r.coverage is not None and r.coverage > 60
+    assert "not correctness" in r.explanation and "capped at 60" in r.explanation
     assert r.by_category["UNSUPPORTED"] == 1
+    assert r.build_items > 0  # CMake/Make findings are reported, not scored
 
 
 def test_readiness_without_cuda(tmp_path: Path) -> None:
     (tmp_path / "main.cpp").write_text("int main() { return 0; }\n")
     r = analyze_project(tmp_path).readiness
-    assert r.score == 0 and r.total_findings == 0
+    assert r.score is None and r.level == "no-cuda" and r.total_findings == 0
 
 
 # --------------------------------------------------------------------------- planner / translator choice

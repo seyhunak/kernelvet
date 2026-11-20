@@ -7,6 +7,21 @@ include breaking changes.
 
 ## [Unreleased]
 
+### Changed
+
+* **Readiness scoring is less biased and explains itself.**
+  * Only source code is scored. Build-file findings are reported as
+    `build_items`, because they always need manual porting.
+  * Each rule counts once per file, so repeated trivial calls no longer
+    outweigh the code that needs a redesign. The per-occurrence figure is kept
+    as `occurrence_coverage`.
+  * New fields: `level` (`mechanical` / `review` / `manual-work` / `blocked` /
+    `no-cuda`), `coverage` before the cap, `cap` and `cap_reason`, a
+    per-category breakdown (`components`), and `limitations`.
+  * Terminal, Markdown/HTML and TUI reports show the breakdown and the limits.
+  * A project with no CUDA source now has `score: null` instead of 0. JSON
+    consumers should handle `null`.
+
 ### Added
 
 * **`compile_commands.json` support.** KernelVet finds the CUDA project's

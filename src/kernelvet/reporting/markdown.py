@@ -18,6 +18,8 @@ from kernelvet.reporting.common import (
     fmt_bytes,
     gpu_cell,
     gpu_label,
+    readiness_line,
+    readiness_rows,
     software_rows,
     stage_rows,
     verification_note,
@@ -199,9 +201,27 @@ def migration_markdown(r: MigrationReport) -> str:
             "",
             "## Migration readiness",
             "",
-            f"**Score: {a.readiness.score}/100** — {a.readiness.explanation}",
+            f"**Score: {readiness_line(a.readiness)}**",
             "",
-            *[f"- {k}: {v}" for k, v in a.readiness.by_category.items()],
+            a.readiness.explanation,
+            "",
+        ]
+        if a.readiness.score is not None:
+            lines += [
+                "| Category | Weight | Constructs | Occurrences | Files |",
+                "|---|---|---|---|---|",
+                *[f"| {' | '.join(row)} |" for row in readiness_rows(a.readiness)],
+                "",
+                f"Per-occurrence coverage (every match counted): {a.readiness.occurrence_coverage}%. "
+                f"Build-system changes, not scored: {a.readiness.build_items}.",
+                "",
+            ]
+        lines += [
+            "**What this score cannot tell you:**",
+            "",
+            *[f"- {x}" for x in a.readiness.limitations],
+            "",
+            f"All findings by category: {', '.join(f'{k} {v}' for k, v in a.readiness.by_category.items())}.",
             "",
         ]
         lines += _findings("Analysis findings", a.findings)

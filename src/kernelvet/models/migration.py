@@ -114,20 +114,61 @@ class ProjectInventory(BaseModel):
         )
 
 
+class ReadinessLevel(StrEnum):
+    """What kind of work the source code needs, from least to most."""
+
+    NO_CUDA = "no-cuda"  # nothing to convert
+    MECHANICAL = "mechanical"  # everything found has a mechanical HIPIFY translation
+    REVIEW = "review"  # converts, but some constructs behave differently on AMD GPUs
+    MANUAL_WORK = "manual-work"  # someone has to rewrite some code
+    BLOCKED = "blocked"  # some code has no HIP equivalent and needs a redesign
+
+
+class ScoreComponent(BaseModel):
+    """One finding category's share of the score."""
+
+    category: FindingCategory
+    weight: float  # how much one construct of this category counts as converted
+    constructs: int  # distinct (rule, file) pairs: what the score counts
+    occurrences: int  # every match, for effort estimates
+    files: int  # files with at least one
+
+
+READINESS_LIMITATIONS = [
+    "Static pattern matching: only constructs with a rule in rules.py are counted. CUDA usage "
+    "without a rule is invisible, which makes coverage look better than it is.",
+    "It measures what HIPIFY can translate, not whether the result compiles, is correct or is fast.",
+    "The weights (1 converted, 0.5 needs review, 0 manual or unsupported) are a fixed convention, "
+    "not calibrated against real migrations.",
+    "Each construct counts once per file, however often it appears and however much code it "
+    "involves: one inline PTX block weighs the same as one cudaMalloc.",
+    "Code behind macros, disabled #ifdef branches or generated at build time is matched as text, "
+    "not evaluated.",
+    "Build-system changes (CUDA language, nvcc, sm_XX, NVIDIA libraries in CMake/Make) are listed "
+    "separately and not scored; they are always needed.",
+]
+
+
 class ReadinessScore(BaseModel):
     """How much of the detected CUDA usage HIPIFY can translate mechanically.
 
     This is *source conversion coverage*. It says nothing about whether the
-    converted program is correct or runs on AMD hardware.
+    converted program is correct or runs on AMD hardware. ``limitations`` lists
+    what the number cannot tell you.
     """
 
-    score: int  # 0..100
+    score: int | None  # 0..100 after caps; None when there is no CUDA code
+    level: ReadinessLevel = ReadinessLevel.NO_CUDA
+    coverage: int | None = None  # 0..100 before caps, over distinct source constructs
+    occurrence_coverage: int | None = None  # same weights, counting every occurrence
+    cap: int | None = None  # upper limit applied to ``score``, if any
+    cap_reason: str | None = None
+    components: list[ScoreComponent] = Field(default_factory=list)
+    build_items: int = 0  # distinct build-system findings (not scored)
     total_findings: int
-    by_category: dict[str, int]
-    explanation: str = (
-        "Share of detected CUDA constructs that have a mechanical HIP translation. "
-        "It measures source conversion coverage only, not correctness or runtime compatibility."
-    )
+    by_category: dict[str, int]  # every finding, source and build, by category
+    explanation: str = ""
+    limitations: list[str] = Field(default_factory=lambda: list(READINESS_LIMITATIONS))
 
 
 class AnalysisResult(BaseModel):

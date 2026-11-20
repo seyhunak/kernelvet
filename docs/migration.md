@@ -73,10 +73,55 @@ equivalent. Every finding is in one of four categories:
 | `MANUAL_INTERVENTION` | Someone has to rewrite it | cuDNN, NVTX, NVML, WMMA, libcu++, NVIDIA-only intrinsics, and CUDA settings in CMake/Make files (`LANGUAGES CUDA`, `nvcc`, `-arch=sm_80`, `-lcudart`, `CUDA_HOME`) |
 | `UNSUPPORTED` | No HIP equivalent | inline PTX assembly, legacy texture references, CUTLASS, TensorRT |
 
-**Readiness score (0–100).** A weighted share of the findings:
-`AUTO_CONVERTIBLE` counts 1, `REQUIRES_VERIFICATION` 0.5, the other two 0. Any
-`UNSUPPORTED` finding caps the score at 60. The score measures **how much
-HIPIFY can convert**, not whether the result will be correct.
+### Readiness score
+
+The score (0–100) measures **how much of the CUDA source HIPIFY can convert
+mechanically**. It doesn't say whether the result will compile, be correct or
+be fast.
+
+How it is computed:
+
+1. **Only source code is scored.** Findings in CMake, Make and `setup.py`
+   files (CUDA language, `nvcc`, `sm_XX`, NVIDIA libraries) are always manual
+   work. They are listed as *build-system changes*, not mixed into the score.
+2. **Each construct counts once per file.** A construct is one rule matched in
+   one file, so 40 `cudaMalloc` calls in a file count as one, the same as one
+   inline-PTX block. Otherwise a project full of trivial calls would look ready
+   while hiding the one piece of code that needs a redesign.
+3. **Weights:** `AUTO_CONVERTIBLE` 1, `REQUIRES_VERIFICATION` 0.5,
+   `MANUAL_INTERVENTION` and `UNSUPPORTED` 0. The result is the *coverage*.
+4. **Cap:** if any `UNSUPPORTED` construct remains, the score is capped at 60,
+   because such a project can't be converted mechanically however much of the
+   rest can.
+
+Each report also shows:
+
+| Field | Meaning |
+| --- | --- |
+| **level** | what kind of work is left: `mechanical` (all converts), `review` (converts, but behaves differently on AMD GPUs), `manual-work` (some code must be rewritten), `blocked` (some code has no HIP equivalent), or `no-cuda` |
+| **coverage** | the score before the cap |
+| **occurrence coverage** | the same weights, counting every match. A large gap from *coverage* means many repeated simple calls |
+| **breakdown** | per category: constructs, occurrences and files affected |
+| **build-system changes** | distinct build-file findings, not scored |
+
+A project with no CUDA in its source has no score (`n/a`, `null` in JSON),
+not 0.
+
+**What the score can't tell you.** Every report lists these, and JSON has them
+as `limitations`:
+
+* Only constructs with a rule in
+  [`rules.py`](https://github.com/seyhunak/kernelvet/blob/main/src/kernelvet/migration/rules.py)
+  are seen. CUDA usage without a rule is invisible, which makes coverage look
+  better than it is.
+* The weights are a fixed convention, not calibrated against real migrations.
+* Each construct counts once per file, whatever its size: the score is about
+  *kinds* of work, not amount of code.
+* Code behind macros, disabled `#ifdef` branches or generated at build time is
+  matched as text, not evaluated.
+
+Use the score to compare projects and to track progress. Use the level and
+the `MANUAL_INTERVENTION` / `UNSUPPORTED` findings to scope the actual work.
 
 ## 2. Plan: a dry run
 

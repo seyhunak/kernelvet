@@ -21,6 +21,8 @@ from kernelvet.reporting.common import (
     fmt_bytes,
     gpu_cell,
     gpu_label,
+    readiness_line,
+    readiness_rows,
     software_rows,
     stage_rows,
     verification_note,
@@ -213,10 +215,24 @@ def render_migration(r: MigrationReport) -> RenderableType:
                     ("Compile database", compile_db_line(inv.compile_db)),
                     ("Dependencies", ", ".join(d.name for d in inv.dependencies) or "none"),
                     ("Tests", str(len(inv.test_files))),
-                    ("Readiness", f"{a.readiness.score}/100 (source conversion coverage only)"),
+                    ("Readiness", readiness_line(a.readiness)),
                 ],
             )
         )
+        if a.readiness.score is not None:
+            rt = Table(
+                title="Readiness breakdown (source code only)", title_justify="left", title_style="bold"
+            )
+            for col in ("Category", "Weight", "Constructs", "Occurrences", "Files"):
+                rt.add_column(col)
+            for row in readiness_rows(a.readiness):
+                rt.add_row(*row)
+            rt.caption = (
+                f"Score counts each rule once per file. Per-occurrence coverage: "
+                f"{a.readiness.occurrence_coverage}%. Build-system changes (not scored): "
+                f"{a.readiness.build_items}. Source conversion coverage only; see `limitations` in JSON."
+            )
+            parts.append(rt)
         parts.append(findings_table("Findings", a.findings))
     if r.plan:
         p = r.plan

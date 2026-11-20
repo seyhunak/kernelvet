@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from kernelvet.diagnose.software import torch_summary
 from kernelvet.models.common import Evidence
-from kernelvet.models.migration import CompileDbSummary, StageStatus, TestCaseResult, VerificationStages
+from kernelvet.models.migration import (
+    CompileDbSummary,
+    ReadinessScore,
+    StageStatus,
+    TestCaseResult,
+    VerificationStages,
+)
 from kernelvet.models.system import GpuDevice, SoftwareInfo
 
 
@@ -92,3 +98,21 @@ def compile_db_line(db: CompileDbSummary | None) -> str:
         return f"{db.path}: unusable ({db.error})"
     total = len(db.covered) + len(db.uncovered)
     return f"{db.path} ({db.entries} entries; covers {len(db.covered)} of {total} CUDA translation unit(s))"
+
+
+def readiness_line(r: ReadinessScore) -> str:
+    """One-line summary: score, level, and what changed it."""
+    if r.score is None:
+        return "n/a (no CUDA constructs found)"
+    text = f"{r.score}/100 · {r.level.value}"
+    if r.cap is not None:
+        text += f" (coverage {r.coverage}%, capped: {r.cap_reason})"
+    return text
+
+
+def readiness_rows(r: ReadinessScore) -> list[tuple[str, str, str, str, str]]:
+    """Breakdown rows: category, weight, constructs, occurrences, files."""
+    return [
+        (c.category.value, f"{c.weight:g}", str(c.constructs), str(c.occurrences), str(c.files))
+        for c in r.components
+    ]
