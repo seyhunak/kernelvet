@@ -106,6 +106,19 @@ def detect_rocm_version(ctx: HostContext, rocm_path: str) -> str | None:
         text = ctx.read_text(f"{rocm_path}/{rel}")
         if text and text.strip():
             return text.strip().splitlines()[0]
+    # ROCm 10.x (TheRock) layout: /opt/rocm/core-10.2/.info/version, no /opt/rocm/.info
+    cores = sorted(
+        (
+            (tuple(int(p) for p in m.group(1).split(".")), name, m.group(1))
+            for name in ctx.listdir(rocm_path)
+            if (m := re.fullmatch(r"core-(\d+\.\d+(?:\.\d+)?)", name))
+        ),
+        reverse=True,
+    )
+    if cores:
+        _, name, from_dir = cores[0]
+        text = ctx.read_text(f"{rocm_path}/{name}/.info/version")
+        return text.strip().splitlines()[0] if text and text.strip() else from_dir
     # /opt/rocm-6.2.0 style install directories
     for name in reversed(ctx.listdir("/opt")):
         m = re.fullmatch(r"rocm-(\d+\.\d+(?:\.\d+)?)", name)

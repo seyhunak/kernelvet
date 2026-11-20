@@ -230,6 +230,28 @@ RULES: list[Rule] = [
         "prefix:nvrtc->hiprtc",
         "hipRTC compiles HIP source, not PTX; verify generated kernel source",
     ),
+    # ROCm 10.x ships only <lib/lib.h>; the flat <lib.h> wrappers HIPIFY emits are gone.
+    _r(
+        "audit.flat_rocm_include",
+        r"#\s*include\s*[<\"](hipblas|hipblaslt|hipfft|hiprand|hipsparse|hipsolver|rocblas|rocfft|"
+        r"rocrand|rocsparse|rocsolver|rccl|miopen)\.h[>\"]",
+        MANUAL,
+        MED,
+        "Flat ROCm library header (removed in ROCm 10.x)",
+        "<{sym}/{sym}.h>",
+        "Include the subdirectory form; it works on ROCm 5.x and later, and ROCm 10.x has no flat header",
+        phases=AU,
+    ),
+    _r(
+        "audit.flat_rocm_include_hpp",
+        r"#\s*include\s*[<\"](hipcub|rocprim)\.hpp[>\"]",
+        MANUAL,
+        MED,
+        "Flat ROCm library header (removed in ROCm 10.x)",
+        "<{sym}/{sym}.hpp>",
+        "Include the subdirectory form; it works on ROCm 5.x and later, and ROCm 10.x has no flat header",
+        phases=AU,
+    ),
     _r(
         "cuda.memcpy_symbol",
         r"\bhipMemcpy(?:To|From)Symbol(?:Async)?\s*\(\s*(?!HIP_SYMBOL)",

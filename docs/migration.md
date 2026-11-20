@@ -202,6 +202,9 @@ would reject the nvcc flags in it.
 * risky patterns: warp size 32, 32-bit lane masks, `hipMemcpyToSymbol` without
   `HIP_SYMBOL()`, compute-capability checks,
 * ROCm libraries that the code includes but that are not installed.
+* flat ROCm library includes such as `<hipblas.h>` or `<hipcub.hpp>`, which
+  HIPIFY emits but ROCm 10.x no longer ships; use `<hipblas/hipblas.h>`, which
+  works on ROCm 5.x and later.
 
 It exits 1 if anything needs manual work or is unsupported, 3 if something
 needs verification, and 0 if it found nothing. **A clean audit does not mean

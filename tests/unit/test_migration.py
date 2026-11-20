@@ -248,6 +248,20 @@ def test_audit_clean_hip_code(tmp_path: Path) -> None:
     assert audit_project(tmp_path, installed_libraries=[]).findings == []
 
 
+def test_audit_flags_flat_rocm_library_includes(tmp_path: Path) -> None:
+    # HIPIFY emits <hipblas.h>; ROCm 10.x only ships <hipblas/hipblas.h>.
+    (tmp_path / "g.cpp").write_text(
+        '#include <hip/hip_runtime.h>\n#include <hipblas.h>\n#include "rocrand.h"\n'
+        "#include <hipcub.hpp>\n#include <hipfft/hipfft.h>\n// #include <rocblas.h>\n"
+    )
+    found = [f for f in audit_project(tmp_path, installed_libraries=[]).findings if "flat_rocm" in f.rule_id]
+    assert [(f.line, f.hip_equivalent) for f in found] == [
+        (2, "<hipblas/hipblas.h>"),
+        (3, "<rocrand/rocrand.h>"),
+        (4, "<hipcub/hipcub.hpp>"),
+    ]
+
+
 # --------------------------------------------------------------------------- workflow / stages
 
 

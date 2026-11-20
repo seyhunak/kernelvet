@@ -55,6 +55,17 @@ include breaking changes.
   "no AMD GPU". Passing tests with no kernel launch leave stage 5 `NOT_RUN`,
   with a recommendation. `ctest` now runs with `-V` so the log of passing tests
   is captured.
+* **ROCm 10.x version detection.** ROCm 10.x (TheRock) keeps the version file
+  at `/opt/rocm/core-X.Y/.info/version` and has no `/opt/rocm/.info`, so
+  `diagnose` reported "version could not be read" and `system info` showed
+  "ROCm not detected". KernelVet now reads the newest `core-X.Y` directory's
+  version file, falling back to the version in the directory name.
+* **The audit flags flat ROCm library includes.** HIPIFY emits
+  `#include <hipblas.h>`, `<rocrand.h>`, `<hipcub.hpp>` and similar. ROCm 10.x
+  ships only the subdirectory form (`<hipblas/hipblas.h>`), so the build failed
+  with "file not found". New audit rules `audit.flat_rocm_include` and
+  `audit.flat_rocm_include_hpp` (manual intervention) name the replacement,
+  which also works on ROCm 5.x and later.
 * Docker isolation now starts the container with `--platform=linux/amd64`.
   AMD's ROCm images are x86-64 only, so on Arm hosts (Apple Silicon)
   `migrate build`/`migrate test` with `isolation = docker` failed to pull the

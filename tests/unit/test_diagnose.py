@@ -12,7 +12,7 @@ from kernelvet.diagnose.hardware import (
     parse_rocminfo,
 )
 from kernelvet.diagnose.runtime import parse_probe_output, run_hip_probe, run_torch_probe
-from kernelvet.diagnose.software import collect_software, detect_tools
+from kernelvet.diagnose.software import collect_software, detect_rocm_version, detect_tools
 from kernelvet.diagnose.system import collect_host, parse_os_release
 from kernelvet.models.common import CheckStatus, Evidence, OverallStatus
 from kernelvet.models.system import TorchInfo
@@ -97,6 +97,18 @@ def test_collect_software_reads_versions(mi300x_ctx: HostContext) -> None:
     assert {"HIP runtime", "rocBLAS", "hipBLAS", "RCCL", "MIOpen", "hipCUB"} <= set(sw.rocm_libraries)
     assert sw.torch is not None and sw.torch.is_rocm_build
     assert sw.has("hipcc") and not sw.has("hipify-perl")
+
+
+def test_rocm_10_core_layout_version(tmp_path: Path) -> None:
+    # ROCm 10.x (TheRock): /opt/rocm has core-10.2/.info/version and no /opt/rocm/.info.
+    for name in ("core-10.1", "core-10.2"):
+        (tmp_path / f"opt/rocm/{name}/.info").mkdir(parents=True)
+    (tmp_path / "opt/rocm/core-10.2/.info/version").write_text("10.2.0\n")
+    (tmp_path / "opt/rocm/core-10.1/.info/version").write_text("10.1.0\n")
+    ctx = HostContext(runner=FakeRunner({}), root=tmp_path, system="Linux")
+    assert detect_rocm_version(ctx, "/opt/rocm") == "10.2.0"
+    (tmp_path / "opt/rocm/core-10.2/.info/version").unlink()
+    assert detect_rocm_version(ctx, "/opt/rocm") == "10.2"  # falls back to the directory name
 
 
 def test_missing_tools_are_reported_absent_not_guessed(empty_linux_ctx: HostContext) -> None:
