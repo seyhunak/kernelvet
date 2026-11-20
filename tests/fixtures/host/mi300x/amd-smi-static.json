@@ -1,0 +1,28 @@
+[
+  {
+    "gpu": 0,
+    "asic": {
+      "market_name": "AMD Instinct MI300X",
+      "vendor_id": "0x1002",
+      "vendor_name": "Advanced Micro Devices Inc. [AMD/ATI]",
+      "subvendor_id": "0x1002",
+      "device_id": "0x74a1",
+      "subsystem_id": "0x74a1",
+      "rev_id": "0x00",
+      "asic_serial": "0x8A2F1C3D4E5B6A79",
+      "oam_id": 0,
+      "num_compute_units": 304,
+      "target_graphics_version": "gfx942"
+    },
+    "bus": {
+      "bdf": "0000:0c:00.0",
+      "max_pcie_width": 16,
+      "max_pcie_speed": {"value": 32, "unit": "GT/s"},
+      "pcie_interface_version": "Gen 5",
+      "slot_type": "OAM"
+    },
+    "vbios": {"name": "AMD MI300X", "build_date": "2025/01/01 00:00", "part_number": "113-M3000100-000", "version": "022.040.003.042.000001"},
+    "board": {"model_number": "102-G30211-00", "product_serial": "N/A", "fru_id": "N/A", "product_name": "AMD Instinct MI300X OAM", "manufacturer_name": "AMD"},
+    "vram": {"type": "HBM", "vendor": "N/A", "size": {"value": 196592, "unit": "MB"}, "bit_width": 8192, "max_bandwidth": {"value": 5300, "unit": "GB/s"}}
+  }
+]
