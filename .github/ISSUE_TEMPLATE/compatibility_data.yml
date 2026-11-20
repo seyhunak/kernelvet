@@ -1,0 +1,24 @@
+name: Compatibility data correction
+description: The bundled compatibility matrix disagrees with AMD's documentation
+labels: [compatibility-data]
+body:
+  - type: textarea
+    id: wrong
+    attributes:
+      label: What is wrong?
+      description: The check, the value KernelVet reported, and the value you expected.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: AMD source URL
+      description: Link to the AMD documentation page that shows the correct value.
+    validations:
+      required: true
+  - type: input
+    id: rocm
+    attributes:
+      label: ROCm version the source applies to
+    validations:
+      required: true

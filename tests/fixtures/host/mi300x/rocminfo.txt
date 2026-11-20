@@ -1,0 +1,79 @@
+ROCk module version 6.12.5 is loaded
+=====================
+HSA System Attributes
+=====================
+Runtime Version:         1.15
+Runtime Ext Version:     1.7
+System Timestamp Freq.:  1000.000000MHz
+Machine Model:           LARGE
+System Endianness:       LITTLE
+
+==========
+HSA Agents
+==========
+*******
+Agent 1
+*******
+  Name:                    AMD EPYC 9654 96-Core Processor
+  Uuid:                    CPU-XX
+  Marketing Name:          AMD EPYC 9654 96-Core Processor
+  Vendor Name:             CPU
+  Feature:                 None specified
+  Profile:                 FULL_PROFILE
+  Float Round Mode:        NEAR
+  Max Queue Number:        0(0x0)
+  Queue Min Size:          0(0x0)
+  Queue Max Size:          0(0x0)
+  Queue Type:              MULTI
+  Node:                    0
+  Device Type:             CPU
+  Cache Info:
+    L1:                      32768(0x8000) KB
+  Chip ID:                 0(0x0)
+  Compute Unit:            192
+  Pool Info:
+    Pool 1
+      Segment:                 GLOBAL; FLAGS: FINE GRAINED
+      Size:                    792421532(0x2f3b6e9c) KB
+  ISA Info:
+*******
+Agent 2
+*******
+  Name:                    gfx942
+  Uuid:                    GPU-8a2f1c3d4e5b6a79
+  Marketing Name:          AMD Instinct MI300X
+  Vendor Name:             AMD
+  Feature:                 KERNEL_DISPATCH
+  Profile:                 BASE_PROFILE
+  Float Round Mode:        NEAR
+  Max Queue Number:        128(0x80)
+  Queue Min Size:          64(0x40)
+  Queue Max Size:          131072(0x20000)
+  Queue Type:              MULTI
+  Node:                    1
+  Device Type:             GPU
+  Cache Info:
+    L1:                      32(0x20) KB
+    L2:                      4096(0x1000) KB
+  Chip ID:                 29857(0x74a1)
+  ASIC Revision:           1(0x1)
+  Cacheline Size:          128(0x80)
+  Max Clock Freq. (MHz):   2100
+  BDFID:                   3072
+  Internal Node ID:        1
+  Compute Unit:            304
+  SIMDs per CU:            4
+  Wavefront Size:          64(0x40)
+  Workgroup Max Size:      1024(0x400)
+  Pool Info:
+    Pool 1
+      Segment:                 GLOBAL; FLAGS: COARSE GRAINED
+      Size:                    201310208(0xbffc000) KB
+      Allocatable:             TRUE
+    Pool 2
+      Segment:                 GROUP
+      Size:                    64(0x40) KB
+  ISA Info:
+    ISA 1
+      Name:                    amdgcn-amd-amdhsa--gfx942:sramecc+:xnack-
+*** Done ***

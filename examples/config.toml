@@ -1,0 +1,28 @@
+# Example KernelVet configuration.
+# Copy to the path printed by `kernelvet config path` (usually ~/.config/kernelvet/config.toml).
+# Every value can also be set with an environment variable: KERNELVET_<NAME>, e.g. KERNELVET_ISOLATION=docker.
+
+# Timeout for detection commands (s)
+command_timeout = 30.0
+# Timeout for builds (s)
+build_timeout = 900.0
+# Timeout per test executable (s)
+test_timeout = 300.0
+# Compile and run the HIP probe during diagnose
+runtime_checks = true
+# Run PyTorch GPU tensor checks during diagnose
+torch_checks = true
+# Python used for PyTorch checks (default: the current interpreter)
+# python_executable = "/opt/venvs/torch-rocm/bin/python"
+# auto, hipify-clang or hipify-perl. auto prefers hipify-clang only when CUDA headers are found.
+hipify_preference = "auto"
+# "docker" runs migrated-project builds/tests in a container: no network, all capabilities dropped
+isolation = "none"
+# Image for isolated builds
+docker_image = "rocm/dev-ubuntu-24.04:latest"
+# --offload-arch for hipcc (default: detected GPU targets)
+# offload_arch = "gfx942"
+# Path to a custom compatibility matrix JSON (same schema as the bundled one)
+# compatibility_matrix = "/etc/kernelvet/matrix.json"
+# Record diagnostic runs and migrations in SQLite
+history = true
