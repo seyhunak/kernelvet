@@ -60,16 +60,26 @@ See [Reports and automation](reports.md) for every format.
 
 ## 4. Try a migration
 
-The repository includes a small CUDA project. Work on a copy:
+The repository includes a small CUDA project. It is not part of the installed
+package, so if you installed with pipx, clone the repository first. Work on a
+copy:
 
 ```bash
+git clone https://github.com/seyhunak/kernelvet.git && cd kernelvet
 cp -R tests/fixtures/cuda/vector_project /tmp/vector_project
 kernelvet migrate analyze /tmp/vector_project
 kernelvet migrate plan /tmp/vector_project
 ```
 
 `analyze` and `plan` work on any machine. Converting needs HIPIFY, building
-needs `hipcc`, and GPU validation needs an AMD GPU. The full walk-through is in
+needs `hipcc`, and GPU validation needs an AMD GPU.
+
+**The sample project is meant to fail the build.** It contains code that
+HIPIFY cannot translate: inline PTX assembly, a 32-bit warp mask, NVTX calls
+and a cuBLAS include that becomes `<hipblas.h>`, which ROCm 10.x no longer
+ships. The audit points at each of them, and the build then fails on them. That
+failure is expected: it shows what KernelVet catches before you spend time on
+a broken build. The full walk-through is in
 [How CUDA-to-HIP migration works](migration.md).
 
 ## 5. Or use the terminal UI

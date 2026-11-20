@@ -89,6 +89,8 @@ class OsEntry(BaseModel):
     version: str
     label: str
     kernels: list[str] = Field(default_factory=list)
+    # kernels in ``kernels`` that only the 7.14-era system-requirements page lists
+    kernels_sysreq_only: list[str] = Field(default_factory=list)
     source: str
     ref: list[str] = Field(default_factory=list)
 
@@ -104,6 +106,8 @@ class OsRestriction(BaseModel):
     gpus: list[str] = Field(default_factory=list)  # only these products are supported
     except_gpus: list[str] = Field(default_factory=list)  # every listed product except these
     gfx: list[str] = Field(default_factory=list)  # schema 1: only these LLVM targets
+    # products in ``gpus`` that only the 7.14-era system-requirements page lists for this OS
+    gpus_sysreq_only: list[str] = Field(default_factory=list)
     note: str
     source: str
     ref: list[str] = Field(default_factory=list)
@@ -164,7 +168,7 @@ class CompatibilityMatrix(BaseModel):
             raise ValueError(f"rules refer to undefined references: {', '.join(unknown)}")
         products = {g.name for g in self.gpus}
         for res in self.os_gpu_restrictions:
-            missing = [n for n in [*res.gpus, *res.except_gpus] if n not in products]
+            missing = [n for n in [*res.gpus, *res.except_gpus, *res.gpus_sysreq_only] if n not in products]
             if missing:
                 raise ValueError(f"restriction {res.os!r} names GPUs not in gpus: {', '.join(missing)}")
         return self

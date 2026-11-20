@@ -13,6 +13,15 @@ prints where your own copy goes.
 * a test,
 * a CMake build and a Make build.
 
+It also contains code that HIPIFY cannot translate, on purpose, so the audit
+has something to find: inline PTX assembly, a 32-bit warp mask, warp-size-32
+assumptions, NVTX calls and a cuBLAS include that becomes `<hipblas.h>`
+(ROCm 10.x ships only `<hipblas/hipblas.h>`). **It is not expected to build
+after conversion.**
+
+The repository's test fixtures are not in the installed package. Clone the
+repository to run this walk-through.
+
 Run it through the whole pipeline. Work on a copy: KernelVet never modifies
 the source, but the fixture is shared with the test suite.
 
@@ -35,8 +44,16 @@ What to expect on a machine without ROCm:
   nothing.
 * `kernelvet migrate report /tmp/vector_project` still shows the analysis,
   with all five verification stages `NOT_RUN`.
-* On a machine with HIPIFY and `hipcc` but no AMD GPU, the last stage is
-  `UNAVAILABLE`. It is never `PASSED`.
+* With HIPIFY and `hipcc` (checked in the `rocm/dev-ubuntu-24.04` image,
+  ROCm 10.2.0, no GPU): `convert` exits 0, `audit` exits 1 with 26 findings
+  (including `cuda.inline_ptx` UNSUPPORTED, `cuda.full_mask`, `lib.nvtx` and
+  `audit.flat_rocm_include`), and `build` exits 1 on `'hipblas.h' file not
+  found` and HIP's 64-bit lane-mask assertion. The stages end as source
+  conversion `PASSED`, static audit `FAILED`, compilation `FAILED`, tests and
+  GPU validation `NOT_RUN`.
+* Fixing those findings by hand is the porting work. Only after that can the
+  build pass, and only on an AMD GPU can the last stage pass. On a machine
+  without an AMD GPU, stage 5 is `UNAVAILABLE`, never `PASSED`.
 
 ## Using JSON output in scripts
 

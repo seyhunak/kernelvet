@@ -215,17 +215,13 @@ def test_os_restricted_to_specific_gpus() -> None:
         ("debian", "13", "gfx942", "AMD Instinct MI300X", CheckStatus.PASS),
         ("debian", "13", "gfx942", "AMD Instinct MI300A", CheckStatus.WARNING),
         ("debian", "13", "gfx90a", "AMD Instinct MI250X", CheckStatus.WARNING),
-        # Debian 12: not MI100; MI210 counts (7.14 footnote) although the 10.2.0 matrix omits it
+        # Debian 12: not MI100; MI210 is only on the 7.14 page, so WARNING on a ROCm 10.2 host
         ("debian", "12", "gfx908", "AMD Instinct MI100", CheckStatus.WARNING),
-        ("debian", "12", "gfx90a", "AMD Instinct MI210", CheckStatus.PASS),
+        ("debian", "12", "gfx90a", "AMD Instinct MI210", CheckStatus.WARNING),
+        ("debian", "12", "gfx90a", "AMD Instinct MI250", CheckStatus.PASS),
         # RHEL 8.10: not MI325X; MI355X counts (10.2.0 matrix) although 7.14 excludes it
         ("rhel", "8.10", "gfx942", "AMD Instinct MI325X", CheckStatus.WARNING),
         ("rhel", "8.10", "gfx950", "AMD Instinct MI355X", CheckStatus.PASS),
-        # RHEL 10.1 / 9.7: everything except Radeon PRO V620
-        ("rhel", "10.1", "gfx1030", "AMD Radeon PRO V620", CheckStatus.WARNING),
-        ("rhel", "10.1", "gfx1030", "AMD Radeon PRO W6800", CheckStatus.PASS),
-        ("rhel", "9.7", "gfx1030", "AMD Radeon PRO V620", CheckStatus.WARNING),
-        ("rhel", "10.1", "gfx942", "AMD Instinct MI300X", CheckStatus.PASS),
         # SLES 16.0: not MI100; SLES 15 SP7 has no restriction
         ("sles", "16.0", "gfx908", "AMD Instinct MI100", CheckStatus.WARNING),
         ("sles", "15.7", "gfx908", "AMD Instinct MI100", CheckStatus.PASS),
@@ -255,6 +251,44 @@ def test_os_gpu_restrictions_per_product(
     if expected is CheckStatus.WARNING:
         assert "restricted to specific GPUs" in r.summary
         assert name in r.detail and "AMD: " in r.detail
+
+
+ROCM_7_14 = sw(rocm="7.14.1", hip="7.14.25300")
+
+
+@pytest.mark.parametrize("software", [sw(), sw(rocm=None)], ids=["rocm-10.2", "no-rocm"])
+def test_facts_only_on_the_7_14_page_are_warnings_off_rocm_7_14(software: SoftwareInfo) -> None:
+    only = "listed only on AMD's system-requirements page for ROCm 7.14"
+    for ver in ("10.1", "9.7"):  # RHEL 10.1 / 9.7: only the 7.14 page lists them
+        r = validate_os(inp(h=host("rhel", ver, "6.12.0"), g=[gpu("gfx942")], s=software), M)
+        assert r.status is CheckStatus.WARNING and only in r.summary, r.summary
+    mi210 = [gpu("gfx90a", "AMD Instinct MI210")]
+    r = validate_os(inp(h=host("debian", "12", "6.1.0"), g=mi210, s=software), M)
+    assert r.status is CheckStatus.WARNING and only in r.detail, r.detail
+    # Ubuntu 24.04: the 10.2.0 matrix lists GA 6.8 for Instinct; HWE 6.17 is only on the 7.14 page
+    k = validate_kernel(inp(h=host(kernel="6.17.0-14-generic"), g=[gpu("gfx942")], s=software), M)
+    assert k.status is CheckStatus.WARNING and only in k.summary, k.summary
+    assert validate_kernel(inp(g=[gpu("gfx942")], s=software), M).status is CheckStatus.PASS  # 6.8
+    # Radeon on Ubuntu 24.04: the matrix lists HWE 7.0 only
+    xtx = [gpu("gfx1100", "AMD Radeon RX 7900 XTX")]
+    assert validate_kernel(inp(h=host(kernel="7.0.1"), g=xtx, s=software), M).status is CheckStatus.PASS
+    assert validate_kernel(inp(g=xtx, s=software), M).status is CheckStatus.WARNING  # 6.8
+
+
+def test_facts_only_on_the_7_14_page_count_on_rocm_7_14() -> None:
+    rhel = host("rhel", "10.1", "6.12.0")
+    w6800, v620 = gpu("gfx1030", "AMD Radeon PRO W6800"), gpu("gfx1030", "AMD Radeon PRO V620")
+    assert validate_os(inp(h=rhel, g=[w6800], s=ROCM_7_14), M).status is CheckStatus.PASS
+    assert validate_os(inp(h=rhel, g=[gpu("gfx942")], s=ROCM_7_14), M).status is CheckStatus.PASS
+    # RHEL 10.1 / 9.7: every GPU except Radeon PRO V620 (7.14 footnotes [8], [9])
+    for ver in ("10.1", "9.7"):
+        r = validate_os(inp(h=host("rhel", ver, "6.12.0"), g=[v620], s=ROCM_7_14), M)
+        assert r.status is CheckStatus.WARNING and "restricted to specific GPUs" in r.summary
+    mi210 = [gpu("gfx90a", "AMD Instinct MI210")]
+    r = validate_os(inp(h=host("debian", "12", "6.1.0"), g=mi210, s=ROCM_7_14), M)
+    assert r.status is CheckStatus.PASS
+    k = validate_kernel(inp(h=host(kernel="6.17.0-14-generic"), g=[gpu("gfx942")], s=ROCM_7_14), M)
+    assert k.status is CheckStatus.PASS
 
 
 def test_radeon_rhel_follows_the_10_2_matrix() -> None:

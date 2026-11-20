@@ -247,7 +247,11 @@ The bundled matrix is
   could not be re-checked is marked `unverified` and says why. Checks cite these
   references in their `source` field.
 * AMD's pages sometimes disagree with each other. Those conflicts are written
-  into the file's `notes` instead of being resolved silently.
+  into the file's `notes` instead of being resolved silently. AMD's
+  system-requirements page still describes ROCm 7.14, so anything only that
+  page lists (for example RHEL 10.1, or kernel 6.17 on Ubuntu 24.04) counts as
+  PASS only on a ROCm 7.14 host. Everywhere else it is a WARNING that names the
+  page.
 * A value earns PASS only if AMD lists it explicitly. Unlisted values are
   WARNING, and known incompatibilities are FAIL.
 * OS support that AMD limits to certain GPUs (for example Debian 13, Rocky

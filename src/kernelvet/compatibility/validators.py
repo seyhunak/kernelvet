@@ -55,6 +55,27 @@ def _check(
     )
 
 
+def sysreq_counts(inp: CompatibilityInput, m: CompatibilityMatrix) -> bool:
+    """Whether facts only the system-requirements page lists count as support for this host.
+
+    That page still describes an older release (7.14.x) than the matrix snapshot. Its facts apply
+    only to a host running that release; for anything else they give WARNING, never PASS.
+    """
+    src = m.sources.get("sysreq")
+    rocm = inp.software.rocm_version
+    return bool(src and src.describes and rocm and same_release(rocm, src.describes))
+
+
+def sysreq_only_reason(m: CompatibilityMatrix) -> str:
+    src = m.sources.get("sysreq")
+    page = (
+        f"AMD's system-requirements page for ROCm {src.describes}"
+        if src and src.describes
+        else ("AMD's system-requirements page")
+    )
+    return f"listed only on {page}, not in the ROCm {m.rocm_version} compatibility matrix"
+
+
 def gpu_classes(inp: CompatibilityInput, m: CompatibilityMatrix) -> set[GpuClass]:
     return {c for g in inp.amd_gpus if (c := m.class_for_gfx(g.gfx_target)) is not None}
 
@@ -173,12 +194,25 @@ def validate_os(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
             remediation="Use a distribution listed in AMD's ROCm system requirements",
             source=m.cite([r for e in considered for r in e.ref], "sysreq+matrix"),
         )
+    sysreq_ok = sysreq_counts(inp, m)
+    if not sysreq_ok and all(e.source == "sysreq" for _, e in matches):
+        return _check(
+            cid,
+            name,
+            CheckStatus.WARNING,
+            f"{pretty} is {sysreq_only_reason(m)}",
+            detail=", ".join(sorted({f"{e.label} ({c})" for c, e in matches})),
+            remediation=f"Use a distribution listed in the ROCm {m.rocm_version} compatibility matrix",
+            source=m.cite([r for _, e in matches for r in e.ref], "sysreq"),
+        )
+    if not sysreq_ok:
+        matches = [(c, e) for c, e in matches if e.source != "sysreq"]
     # GPU-specific OS restrictions
     os_id, ver = _os_key(host)
     for r in m.os_gpu_restrictions:
         r_id, _, r_ver = r.os.partition(":")
         if r_id == os_id and (r_ver == ver or r_ver == major_minor(ver)):
-            problems = [p for g in inp.amd_gpus if (p := _restriction_problem(r, g, m))]
+            problems = [p for g in inp.amd_gpus if (p := _restriction_problem(r, g, m, sysreq_ok))]
             if problems:
                 return _check(
                     cid,
@@ -201,8 +235,14 @@ def validate_os(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
     )
 
 
-def _restriction_problem(r: OsRestriction, g: GpuDevice, m: CompatibilityMatrix) -> str | None:
+def _restriction_problem(
+    r: OsRestriction, g: GpuDevice, m: CompatibilityMatrix, sysreq_ok: bool = True
+) -> str | None:
     """Why a detected GPU is not (or may not be) supported on a restricted OS; ``None`` if it is."""
+
+    def ok(product: str) -> bool:
+        return r.allows(product) and (sysreq_ok or product not in r.gpus_sysreq_only)
+
     gfx = (g.gfx_target or "").split(":")[0]
     label = g.marketing_name or f"GPU {g.index}"
     not_listed = f"{label} ({gfx or 'unknown target'}) is not listed for this OS"
@@ -213,8 +253,12 @@ def _restriction_problem(r: OsRestriction, g: GpuDevice, m: CompatibilityMatrix)
         return not_listed
     product = m.identify_gpu(gfx, g.marketing_name)
     if product is not None:
-        return None if r.allows(product.name) else f"{product.name} is not listed for this OS"
-    allowed = [e.name for e in candidates if r.allows(e.name)]
+        if ok(product.name):
+            return None
+        if r.allows(product.name):
+            return f"{product.name} on this OS is {sysreq_only_reason(m)}"
+        return f"{product.name} is not listed for this OS"
+    allowed = [e.name for e in candidates if ok(e.name)]
     if len(allowed) == len(candidates):
         return None
     if not allowed:
@@ -237,6 +281,16 @@ def validate_kernel(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRes
     if not matches:
         return _check(cid, name, CheckStatus.SKIPPED, "OS not in the matrix, so no kernel list applies")
     kernels = sorted({k for _, e in matches for k in e.kernels})
+    sysreq_ok = sysreq_counts(inp, m)
+    confirmed = sorted(
+        {
+            k
+            for _, e in matches
+            if sysreq_ok or e.source != "sysreq"
+            for k in e.kernels
+            if sysreq_ok or k not in e.kernels_sysreq_only
+        }
+    )
     kernel_src = m.cite([r for _, e in matches for r in e.ref], "sysreq+matrix")
     if not kernels:
         return _check(
@@ -247,12 +301,22 @@ def validate_kernel(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRes
             "kernel version for this OS (e.g. Oracle UEK)",
             source=kernel_src,
         )
-    if kernel_mm in kernels:
+    if kernel_mm in confirmed:
         return _check(
             cid,
             name,
             CheckStatus.PASS,
             f"Kernel {host.kernel} matches listed {kernel_mm}",
+            source=kernel_src,
+        )
+    if kernel_mm in kernels:
+        return _check(
+            cid,
+            name,
+            CheckStatus.WARNING,
+            f"Kernel {kernel_mm} for this OS is {sysreq_only_reason(m)}",
+            detail="Listed in the matrix: " + (", ".join(confirmed) or "none"),
+            remediation="Use the GA or HWE kernel the compatibility matrix lists for your distribution",
             source=kernel_src,
         )
     return _check(

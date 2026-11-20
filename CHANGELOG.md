@@ -7,6 +7,32 @@ include breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+
+* **Facts only the 7.14-era system-requirements page lists no longer give
+  PASS on other ROCm releases.**
+  * The compatibility data merges AMD's 10.2.0 matrix with the
+    system-requirements page, which still describes ROCm 7.14, and either page
+    used to count. So a ROCm 10.2 host on RHEL 10.1 or 9.7, kernel 6.17 on
+    Ubuntu 24.04, or an MI210 on Debian 12 got PASS, although the 10.2.0
+    matrix does not list them.
+  * These facts are now marked (`source: "sysreq"`, `kernels_sysreq_only`,
+    `gpus_sysreq_only`) and count only on a host running ROCm 7.14. Anywhere
+    else, including when ROCm is not detected, `compat.os` and
+    `compat.kernel` give WARNING: "listed only on AMD's system-requirements
+    page for ROCm 7.14.x, not in the ROCm 10.2.0 compatibility matrix".
+
+### Changed
+
+* **The docs say the sample CUDA project is meant to fail its build.**
+  * The getting-started guide and `examples/README.md` now explain that
+    `tests/fixtures/cuda/vector_project` contains code HIPIFY cannot
+    translate: inline PTX, a 32-bit warp mask, NVTX and a flat `<hipblas.h>`.
+  * So the build fails at stage 3, as recorded in a ROCm 10.2.0 container.
+  * They also say the fixtures need a clone, because pipx installs don't
+    include them.
+  * The examples README no longer claims the walk-through reaches stage 5.
+
 ## [0.3.0] - 2026-11-20
 
 ### Changed

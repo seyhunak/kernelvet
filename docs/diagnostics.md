@@ -109,8 +109,13 @@ release-history pages.
 * Every rule cites a reference: the exact AMD page, section and row or footnote,
   the ROCm version that page describes, and when it was transcribed and last
   re-checked. Each check's `source` shows these references.
-* Where AMD's pages disagree, both are recorded, and either one counts as a
-  match. The disagreement is written into the file's `notes`.
+* Where AMD's pages disagree, both are recorded and the disagreement is
+  written into the file's `notes`. The compatibility matrix is the current
+  source. The system-requirements page still describes ROCm 7.14, so what only
+  it lists (RHEL 10.1 and 9.7, kernel 6.17 on Ubuntu 24.04, MI210 on Debian 12,
+  ...) counts as PASS only when the installed ROCm is 7.14. On any other host,
+  or when ROCm is not detected, it is a WARNING: "listed only on AMD's
+  system-requirements page for ROCm 7.14.x".
 * A GPU that AMD doesn't list is not officially supported, and gets WARNING.
 
 Always confirm important decisions against the live
