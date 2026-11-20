@@ -7,6 +7,8 @@ include breaking changes.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-20
+
 ### Fixed
 
 * **ROCm installed with pip (TheRock Python packages) is now found.**
@@ -265,7 +267,8 @@ First public release.
 - Not yet tested on real AMD GPU hardware: CI has no GPU runner, so the
   hardware paths have only been exercised against recorded-format fixtures.
 
-[Unreleased]: https://github.com/seyhunak/kernelvet/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/seyhunak/kernelvet/compare/v0.3.2...HEAD
+[0.3.2]: https://pypi.org/project/kernelvet/0.3.2/
 [0.3.1]: https://pypi.org/project/kernelvet/0.3.1/
 [0.3.0]: https://pypi.org/project/kernelvet/0.3.0/
 [0.2.0]: https://pypi.org/project/kernelvet/0.2.0/

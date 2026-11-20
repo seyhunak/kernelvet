@@ -5,6 +5,6 @@ by or endorsed by Advanced Micro Devices, Inc. (AMD), is not an AMD product and 
 not a certification authority.
 """
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 __all__ = ["__version__"]
