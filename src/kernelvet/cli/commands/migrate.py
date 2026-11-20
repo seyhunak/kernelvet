@@ -16,7 +16,7 @@ from kernelvet.cli.output import (
     settings_or_exit,
 )
 from kernelvet.diagnose.hardware import discover_gpus
-from kernelvet.diagnose.software import detect_libraries
+from kernelvet.diagnose.software import installed_libraries
 from kernelvet.execution.compiler import build_project
 from kernelvet.execution.runner import run_tests
 from kernelvet.execution.sandbox import SandboxConfig
@@ -227,8 +227,7 @@ def audit(
     root = _dir(project)
     fmt = resolve_format(fmt, output)
     ctx = HostContext(timeout=s.command_timeout)
-    rocm = ctx.rocm_path()
-    libs = detect_libraries(ctx, rocm) if ctx.exists(rocm) else None
+    libs = installed_libraries(ctx)
     with progress() as cb:
         cb("Auditing", 0.5)
         result = audit_project(root, installed_libraries=libs)

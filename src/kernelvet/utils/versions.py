@@ -27,6 +27,14 @@ def version_str(text: str | None) -> str | None:
     return None if v is None else ".".join(str(p) for p in v)
 
 
+_PRERELEASE = re.compile(r"^\s*v?\d+\.\d+(?:\.\d+)?(?:a|b|rc|\.?dev)\d*", re.IGNORECASE)
+
+
+def is_prerelease(text: str | None) -> bool:
+    """PEP 440 style pre-release right after the version: "10.1.0a20260823", "10.2.0rc1"."""
+    return bool(text and _PRERELEASE.match(text))
+
+
 def same_release(a: str | None, b: str | None, depth: int = 2) -> bool:
     va, vb = parse_version(a), parse_version(b)
     if va is None or vb is None:

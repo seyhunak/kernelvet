@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+
+import pytest
 
 from conftest import HOST, FakeRunner, mi300x_runner
 from kernelvet.diagnose.engine import DiagnoseOptions, run_diagnosis, static_checks
@@ -12,7 +15,14 @@ from kernelvet.diagnose.hardware import (
     parse_rocminfo,
 )
 from kernelvet.diagnose.runtime import parse_probe_output, run_hip_probe, run_torch_probe
-from kernelvet.diagnose.software import collect_software, detect_rocm_version, detect_tools
+from kernelvet.diagnose.software import (
+    _shebang_python,
+    collect_software,
+    detect_rocm_version,
+    detect_tools,
+    installed_libraries,
+    locate_rocm,
+)
 from kernelvet.diagnose.system import collect_host, parse_os_release
 from kernelvet.models.common import CheckStatus, Evidence, OverallStatus
 from kernelvet.models.system import TorchInfo
@@ -109,6 +119,100 @@ def test_rocm_10_core_layout_version(tmp_path: Path) -> None:
     assert detect_rocm_version(ctx, "/opt/rocm") == "10.2.0"
     (tmp_path / "opt/rocm/core-10.2/.info/version").unlink()
     assert detect_rocm_version(ctx, "/opt/rocm") == "10.2"  # falls back to the directory name
+
+
+SITE = "/venv/lib/python3.12/site-packages"
+PIP_LONG_PATH_SCRIPT = "#!/bin/sh\n'''exec' \"/very/long/venv/bin/python3\" \"$0\" \"$@\"\n' '''\n"
+
+
+def pip_rocm_ctx(root: Path, *, version: str = "10.2.0", probe: bool = True) -> HostContext:
+    """ROCm from TheRock's Python packages in /venv (``pip install rocm[libraries,devel]``), no /opt/rocm."""
+    (root / "etc").mkdir(parents=True, exist_ok=True)
+    (root / "etc/os-release").write_text((HOST / "os-release").read_text())
+    (root / "venv/bin").mkdir(parents=True, exist_ok=True)
+    (root / "venv/bin/rocm-sdk").write_text("#!/venv/bin/python3\nimport sys\n")
+    pkgs = {
+        "_rocm_sdk_core": f"{SITE}/_rocm_sdk_core",
+        "_rocm_sdk_devel": f"{SITE}/_rocm_sdk_devel",
+        "_rocm_sdk_libraries_gfx120X_all": f"{SITE}/_rocm_sdk_libraries_gfx120X_all",
+    }
+    for rel, files in (
+        ("_rocm_sdk_core/lib", ["libamdhip64.so.7"]),
+        ("_rocm_sdk_libraries_gfx120X_all/lib", ["librocblas.so.5", "libhipblas.so.3"]),
+    ):
+        d = root / SITE.lstrip("/") / rel
+        d.mkdir(parents=True)
+        for f in files:
+            (d / f).write_text("")
+    (root / SITE.lstrip("/") / "_rocm_sdk_devel/include/hipcub").mkdir(parents=True)
+    runner = FakeRunner({"rocm-sdk": "/venv/bin/rocm-sdk"})
+    runner.on("rocm-sdk version", version + "\n" if version else "", rc=0 if version else 1)
+    runner.on(
+        lambda a: a[0] == "/venv/bin/python3" and "_rocm_sdk_" in a[-1],
+        lambda a, kw: CommandResult(a, 0 if probe else 1, stdout=json.dumps(pkgs) if probe else ""),
+    )
+    return HostContext(runner=runner, root=root, env={}, system="Linux", timeout=5)
+
+
+def test_rocm_from_pip_packages_is_found_with_rocm_sdk(tmp_path: Path) -> None:
+    ctx = pip_rocm_ctx(tmp_path)
+    sw = collect_software(ctx, torch=False)
+    assert sw.rocm_version == "10.2.0"
+    assert sw.rocm_source == "rocm-sdk"
+    assert sw.rocm_path == f"{SITE}/_rocm_sdk_devel"
+    assert {"HIP runtime", "rocBLAS", "hipBLAS", "hipCUB"} <= set(sw.rocm_libraries)
+    assert installed_libraries(ctx) == sw.rocm_libraries
+    # Read-only: `rocm-sdk version` and a package listing, never `rocm-sdk path` or `init`.
+    assert isinstance(ctx.runner, FakeRunner)
+    assert [c for c in ctx.runner.calls if c[0] == "rocm-sdk"] == [["rocm-sdk", "version"]] * 2
+    report = run_diagnosis(ctx, DiagnoseOptions(runtime=False, torch=False))
+    rocm = next(c for c in report.checks if c.id == "software.rocm")
+    assert rocm.status is CheckStatus.PASS and "found with rocm-sdk" in rocm.summary, rocm.summary
+
+
+def test_rocm_sdk_without_a_package_listing_still_gives_the_version(tmp_path: Path) -> None:
+    sw = collect_software(pip_rocm_ctx(tmp_path, probe=False), torch=False)
+    assert (sw.rocm_version, sw.rocm_source, sw.rocm_path, sw.rocm_libraries) == (
+        "10.2.0",
+        "rocm-sdk",
+        None,
+        [],
+    )
+
+
+def test_rocm_sdk_whose_version_fails_is_a_warning_not_a_pass(tmp_path: Path) -> None:
+    report = run_diagnosis(pip_rocm_ctx(tmp_path, version=""), DiagnoseOptions(runtime=False, torch=False))
+    rocm = next(c for c in report.checks if c.id == "software.rocm")
+    assert rocm.status is CheckStatus.WARNING and "version could not be read" in rocm.summary, rocm.summary
+
+
+def test_rocm_path_beats_rocm_sdk_and_rocm_sdk_beats_opt_rocm(tmp_path: Path) -> None:
+    ctx = pip_rocm_ctx(tmp_path)
+    (tmp_path / "opt/rocm/.info").mkdir(parents=True)
+    (tmp_path / "opt/rocm/.info/version").write_text("7.14.1\n")
+    inst = locate_rocm(ctx)
+    assert inst is not None and inst.source == "rocm-sdk"
+    ctx.env["ROCM_PATH"] = "/opt/rocm"
+    inst = locate_rocm(ctx)
+    assert inst is not None and (inst.source, inst.version) == ("ROCM_PATH", "7.14.1")
+    ctx.env["ROCM_PATH"] = "/does/not/exist"  # a stale variable falls through to what is installed
+    inst = locate_rocm(ctx)
+    assert inst is not None and inst.source == "rocm-sdk"
+
+
+@pytest.mark.parametrize(
+    ("script", "python"),
+    [
+        ("#!/venv/bin/python3\n", "/venv/bin/python3"),
+        ("#!/usr/bin/env python3.12\n", "python3.12"),
+        (PIP_LONG_PATH_SCRIPT, "/very/long/venv/bin/python3"),
+        ("#!/bin/bash\necho hi\n", None),
+    ],
+)
+def test_console_script_interpreter(tmp_path: Path, script: str, python: str | None) -> None:
+    (tmp_path / "rocm-sdk").write_text(script)
+    ctx = HostContext(runner=FakeRunner({}), root=tmp_path, env={}, system="Linux")
+    assert _shebang_python(ctx, "/rocm-sdk") == python
 
 
 def test_missing_tools_are_reported_absent_not_guessed(empty_linux_ctx: HostContext) -> None:

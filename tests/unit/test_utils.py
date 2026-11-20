@@ -16,7 +16,7 @@ from kernelvet.models.common import (
 )
 from kernelvet.utils.proc import CommandRunner
 from kernelvet.utils.redact import redact, scrub_env
-from kernelvet.utils.versions import major_minor, parse_version, same_release
+from kernelvet.utils.versions import is_prerelease, major_minor, parse_version, same_release
 
 
 def c(status: CheckStatus) -> CheckResult:
@@ -119,3 +119,11 @@ def test_unusable_history_raises_history_error(tmp_path: Path) -> None:
     ):
         with pytest.raises(HistoryError, match=r"history\.db"):
             call()
+
+
+def test_prerelease_versions() -> None:
+    for v in ("10.1.0a20260823", "10.2.0rc1", "10.2.0.dev0", "10.2b3"):
+        assert is_prerelease(v), v
+    # releases, build suffixes and git hashes are not pre-releases
+    for v in ("10.2.0", "7.17.26434-0000000", "6.2.41134-65d174c3e", "6.2.4-a1b2", None, ""):
+        assert not is_prerelease(v), v

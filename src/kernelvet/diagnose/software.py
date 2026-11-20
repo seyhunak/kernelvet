@@ -7,8 +7,11 @@ Static detection only: nothing here runs GPU code. Runtime execution lives in
 from __future__ import annotations
 
 import json
+import posixpath
 import re
 import sys
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 
 from kernelvet.models.system import SoftwareInfo, ToolInfo, TorchInfo
 from kernelvet.utils.proc import HostContext
@@ -19,6 +22,7 @@ TOOLS: list[tuple[str, list[str] | None]] = [
     ("rocminfo", None),
     ("amd-smi", ["amd-smi", "version"]),
     ("rocm-smi", None),
+    ("rocm-sdk", None),
     ("hipcc", ["hipcc", "--version"]),
     ("hipconfig", ["hipconfig", "--version"]),
     ("hipify-clang", ["hipify-clang", "--version"]),
@@ -154,17 +158,114 @@ def detect_driver(ctx: HostContext) -> tuple[str | None, bool | None]:
     return version, loaded
 
 
-def detect_libraries(ctx: HostContext, rocm_path: str) -> list[str]:
+def detect_libraries(ctx: HostContext, rocm_path: str | Sequence[str]) -> list[str]:
+    roots = [rocm_path] if isinstance(rocm_path, str) else list(rocm_path)
     found: list[str] = []
-    libdirs = [f"{rocm_path}/lib", f"{rocm_path}/lib64"]
-    names = {n for d in libdirs for n in ctx.listdir(d)}
+    names = {n for r in roots for d in (f"{r}/lib", f"{r}/lib64") for n in ctx.listdir(d)}
     for family, stem in ROCM_LIBRARIES.items():
         if any(n == f"{stem}.so" or n.startswith(f"{stem}.so") for n in names):
             found.append(family)
     for family, rel in HEADER_LIBRARIES.items():
-        if ctx.exists(f"{rocm_path}/{rel}"):
+        if any(ctx.exists(f"{r}/{rel}") for r in roots):
             found.append(family)
     return found
+
+
+# Lists the TheRock Python packages (_rocm_sdk_core, _rocm_sdk_devel, _rocm_sdk_libraries_<family>)
+# without importing them. `rocm-sdk path --root` would also give the devel root, but it needs
+# rocm[devel] and creates the devel links on first use, and diagnostics never write to the host.
+ROCM_SDK_PROBE = r"""
+import json, os, pkgutil
+out = {}
+for m in pkgutil.iter_modules():
+    base = getattr(m.module_finder, "path", None)
+    if m.ispkg and base and m.name.startswith("_rocm_sdk_") and m.name not in out:
+        out[m.name] = os.path.join(base, m.name)
+print(json.dumps(out))
+"""
+
+
+@dataclass
+class RocmInstall:
+    """Where ROCm was found. ``source`` says how: ROCM_PATH, HIP_PATH, /opt/rocm or rocm-sdk."""
+
+    source: str
+    path: str | None = None
+    version: str | None = None
+    roots: list[str] = field(default_factory=list)  # directories holding lib/ and include/
+
+
+def _shebang_python(ctx: HostContext, script: str) -> str | None:
+    """The interpreter a pip console script runs with (plain or pip's long-path /bin/sh form)."""
+    head = (ctx.read_text(script, limit=1024) or "").splitlines()
+    if not head or not head[0].startswith("#!"):
+        return None
+    words = head[0][2:].split()
+    if words and posixpath.basename(words[0]) == "env":
+        words = words[1:]
+    if words and posixpath.basename(words[0]).startswith("python"):
+        return words[0]
+    # pip's form for long paths: #!/bin/sh, then '''exec' "/long/venv/bin/python3" "$0" "$@"
+    for line in head[1:3]:
+        m = re.search(r"exec' \"([^\"]+)\"", line)
+        if m:
+            return m.group(1)
+    return None
+
+
+def _rocm_sdk_install(ctx: HostContext) -> RocmInstall | None:
+    """ROCm installed as TheRock Python packages (``pip install rocm[...]``), found via rocm-sdk."""
+    script = ctx.which("rocm-sdk")
+    if not script:
+        return None
+    res = ctx.run(["rocm-sdk", "version"], timeout=min(ctx.timeout, 30))
+    version = _first_line(res.stdout) if res.ok else ""
+    inst = RocmInstall(source="rocm-sdk", version=version if version_str(version) else None)
+    python = _shebang_python(ctx, script)
+    if python:
+        probe = ctx.run([python, "-c", ROCM_SDK_PROBE], timeout=min(ctx.timeout, 30))
+        try:
+            pkgs = json.loads(probe.stdout.strip().splitlines()[-1]) if probe.ok else {}
+        except (json.JSONDecodeError, IndexError):
+            pkgs = {}
+        if isinstance(pkgs, dict):
+            order = ["_rocm_sdk_devel", "_rocm_sdk_core"]
+            names = order + sorted(n for n in pkgs if n.startswith("_rocm_sdk_libraries"))
+            inst.roots = [str(pkgs[n]) for n in names if isinstance(pkgs.get(n), str)]
+            inst.path = next((str(pkgs[n]) for n in order if isinstance(pkgs.get(n), str)), None)
+    return inst
+
+
+def locate_rocm(ctx: HostContext) -> RocmInstall | None:
+    """Find the ROCm install the tools on this host would use, or ``None``.
+
+    An explicit ``ROCM_PATH`` / ``HIP_PATH`` wins. Then ``rocm-sdk`` on PATH: an activated
+    virtual environment with TheRock's Python packages puts its hipcc first on PATH, so it is
+    the install in use. Then ``/opt/rocm``.
+    """
+    for var in ("ROCM_PATH", "HIP_PATH"):
+        p = ctx.env.get(var)
+        if p and ctx.exists(p):
+            return RocmInstall(source=var, path=p, version=detect_rocm_version(ctx, p), roots=[p])
+    sdk = _rocm_sdk_install(ctx)
+    if sdk is not None:
+        return sdk
+    if ctx.exists("/opt/rocm"):
+        return RocmInstall(
+            source="/opt/rocm",
+            path="/opt/rocm",
+            version=detect_rocm_version(ctx, "/opt/rocm"),
+            roots=["/opt/rocm"],
+        )
+    return None
+
+
+def installed_libraries(ctx: HostContext) -> list[str] | None:
+    """ROCm library families present, or ``None`` when ROCm itself was not found."""
+    inst = locate_rocm(ctx)
+    if inst is None or not inst.roots:
+        return None
+    return detect_libraries(ctx, inst.roots)
 
 
 TORCH_PROBE = r"""
@@ -200,20 +301,20 @@ def detect_torch(ctx: HostContext, python: str | None = None) -> TorchInfo:
 
 
 def collect_software(ctx: HostContext, *, python: str | None = None, torch: bool = True) -> SoftwareInfo:
-    rocm_path = ctx.rocm_path()
-    rocm_present = ctx.exists(rocm_path)
+    rocm = locate_rocm(ctx)
     tools = detect_tools(ctx)
     runtime, compiler = detect_hip_compiler(ctx, tools)
     driver, loaded = detect_driver(ctx)
     return SoftwareInfo(
-        rocm_version=detect_rocm_version(ctx, rocm_path) if rocm_present else None,
-        rocm_path=rocm_path if rocm_present else None,
+        rocm_version=rocm.version if rocm else None,
+        rocm_path=rocm.path if rocm else None,
+        rocm_source=rocm.source if rocm else None,
         hip_runtime_version=runtime,
         hip_compiler_version=compiler,
         amdgpu_driver_version=driver,
         amdgpu_module_loaded=loaded,
         tools=tools,
-        rocm_libraries=detect_libraries(ctx, rocm_path) if rocm_present else [],
+        rocm_libraries=detect_libraries(ctx, rocm.roots) if rocm and rocm.roots else [],
         torch=detect_torch(ctx, python) if torch else None,
     )
 

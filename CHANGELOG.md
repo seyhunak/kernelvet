@@ -7,6 +7,32 @@ include breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+
+* **ROCm installed with pip (TheRock Python packages) is now found.**
+  * `pip install "rocm[libraries,devel]"` puts ROCm inside a virtual
+    environment, not under `/opt/rocm`. KernelVet looked only at `ROCM_PATH`,
+    `HIP_PATH` and `/opt/rocm`, so a working pip-only setup got "ROCm not
+    found" and an UNHEALTHY verdict. Reported on the AMD Developer Community.
+  * When `rocm-sdk` is on PATH, `software.rocm` now takes the version from
+    `rocm-sdk version`, and the libraries from the `_rocm_sdk_*` package
+    folders. The order is `ROCM_PATH`, `HIP_PATH`, `rocm-sdk`, then
+    `/opt/rocm`. A `ROCM_PATH` that points nowhere no longer hides an
+    installed ROCm.
+  * Nothing is written: KernelVet does not run `rocm-sdk path` or
+    `rocm-sdk init`, which set up the devel links on first use.
+  * `migrate audit` and the TUI audit use the same lookup for the
+    missing-library checks.
+* **A nightly ROCm build no longer gives PASS in `compat.rocm`.** A
+  pre-release version such as `10.2.0a20261118` gets WARNING, because AMD's
+  compatibility matrix covers releases only.
+
+### Added
+
+* `rocm_source` in the JSON `software` section says how ROCm was found:
+  `ROCM_PATH`, `HIP_PATH`, `rocm-sdk` or `/opt/rocm`. `rocm-sdk` is listed
+  among the detected tools.
+
 ## [0.3.1] - 2026-11-20
 
 ### Fixed
