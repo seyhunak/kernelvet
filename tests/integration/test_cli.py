@@ -138,7 +138,7 @@ def test_gpu_list_and_system_info(fake_host: HostContext) -> None:
     r = runner.invoke(app, ["gpu", "list"])
     assert "MI300X" in r.stdout and "gfx942" in r.stdout
     r = runner.invoke(app, ["system", "info", "--json"])
-    assert json.loads(r.stdout)["software"]["rocm_version"] == "10.1.0-25401"
+    assert json.loads(r.stdout)["software"]["rocm_version"] == "10.2.0"
     assert runner.invoke(app, ["system", "info"]).exit_code == 0
 
 

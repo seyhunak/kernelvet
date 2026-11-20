@@ -42,8 +42,8 @@ def gpu(gfx: str | None = "gfx942", name: str = "AMD Instinct MI300X") -> GpuDev
 
 
 def sw(
-    rocm: str | None = "10.1.0",
-    hip: str | None = "10.1.25401",
+    rocm: str | None = "10.2.0",
+    hip: str | None = "7.17.26434",
     driver: str | None = "31.60.0",
     torch: TorchInfo | None = None,
 ) -> SoftwareInfo:
@@ -64,7 +64,7 @@ def inp(
 
 
 def test_matrix_records_provenance() -> None:
-    assert M.rocm_version == "10.1.0"
+    assert M.rocm_version == "10.2.0"
     assert all(src.url.startswith("https://rocm.docs.amd.com/") for src in M.sources.values())
     assert M.retrieved
     assert M.notes
@@ -91,7 +91,7 @@ def test_every_bundled_rule_has_an_exact_reference() -> None:
 
 def test_rule_source_and_ref_agree() -> None:
     # Every page a rule names in `source` (where it was transcribed from) is cited by an exact ref.
-    # Refs may add a page that confirms the rule (supported GPUs are also listed in the 10.1.0 matrix).
+    # Refs may add a page that confirms the rule (supported GPUs are also listed in the 10.2.0 matrix).
     rules = [
         *M.gpus,
         *(e for es in M.os.values() for e in es),
@@ -106,12 +106,12 @@ def test_rule_source_and_ref_agree() -> None:
 def test_checks_cite_page_section_rocm_version_and_date() -> None:
     src = validate_gpu(inp(), M).source or ""
     assert "System requirements (Linux) > Supported GPUs" in src
-    assert "ROCm 7.14.0" in src and "ROCm 10.1.0" in src
+    assert "ROCm 7.14.0" in src and "ROCm 10.2.0" in src
     assert f"retrieved {M.retrieved}" in src
     assert "#supported-gpus" in src
     assert "AI ecosystem compatibility" in (
         validate_pytorch(
-            inp(s=sw(torch=TorchInfo(installed=True, version="2.13.0", hip_version="10.1.25401"))), M
+            inp(s=sw(torch=TorchInfo(installed=True, version="2.13.0", hip_version="7.17.26434"))), M
         ).source
         or ""
     )
@@ -147,7 +147,7 @@ def test_undefined_reference_is_rejected(tmp_path: Path) -> None:
 def test_schema_1_matrix_without_references_still_loads(tmp_path: Path) -> None:
     data = _bundled_matrix_data()
     data["schema"] = 1
-    for key in ("references", "release_versions_ref", "targets_uncertain_ref"):
+    for key in ("references", "release_versions_ref", "targets_uncertain_ref", "hip_versions_ref"):
         data.pop(key)
     for e in [
         *data["gpus"],
@@ -172,7 +172,9 @@ def test_schema_1_matrix_without_references_still_loads(tmp_path: Path) -> None:
         ("gfx950", CheckStatus.PASS),
         ("gfx1100", CheckStatus.PASS),
         ("gfx906", CheckStatus.FAIL),  # listed as unsupported
-        ("gfx1151", CheckStatus.WARNING),  # ambiguous in the published table
+        ("gfx1102", CheckStatus.PASS),  # RX 7600, listed in the 10.2.0 matrix
+        ("gfx1151", CheckStatus.WARNING),  # Ryzen APU: KernelVet does not check APU support
+        ("gfx1103", CheckStatus.WARNING),  # Ryzen APU
         ("gfx803", CheckStatus.WARNING),  # not listed
         (None, CheckStatus.WARNING),  # not detected
     ],
@@ -213,10 +215,10 @@ def test_os_restricted_to_specific_gpus() -> None:
         ("debian", "13", "gfx942", "AMD Instinct MI300X", CheckStatus.PASS),
         ("debian", "13", "gfx942", "AMD Instinct MI300A", CheckStatus.WARNING),
         ("debian", "13", "gfx90a", "AMD Instinct MI250X", CheckStatus.WARNING),
-        # Debian 12: not MI100; MI210 counts (7.14 footnote) although the 10.1.0 matrix omits it
+        # Debian 12: not MI100; MI210 counts (7.14 footnote) although the 10.2.0 matrix omits it
         ("debian", "12", "gfx908", "AMD Instinct MI100", CheckStatus.WARNING),
         ("debian", "12", "gfx90a", "AMD Instinct MI210", CheckStatus.PASS),
-        # RHEL 8.10: not MI325X; MI355X counts (10.1.0 matrix) although 7.14 excludes it
+        # RHEL 8.10: not MI325X; MI355X counts (10.2.0 matrix) although 7.14 excludes it
         ("rhel", "8.10", "gfx942", "AMD Instinct MI325X", CheckStatus.WARNING),
         ("rhel", "8.10", "gfx950", "AMD Instinct MI355X", CheckStatus.PASS),
         # RHEL 10.1 / 9.7: everything except Radeon PRO V620
@@ -234,6 +236,15 @@ def test_os_restricted_to_specific_gpus() -> None:
         ("ol", "10.0", "gfx942", "AMD Instinct MI325X", CheckStatus.PASS),
         ("ol", "8.10", "gfx942", "AMD Instinct MI300X", CheckStatus.PASS),
         ("ol", "8.10", "gfx942", "AMD Instinct MI325X", CheckStatus.WARNING),
+        # 10.2.0: MI350P is not listed for Ubuntu 22.04, RHEL 10.0 or 9.4, but is for Debian 13
+        ("ubuntu", "22.04", "gfx950", "AMD Instinct MI350P", CheckStatus.WARNING),
+        ("ubuntu", "22.04", "gfx950", "AMD Instinct MI350X", CheckStatus.PASS),
+        ("rhel", "10.0", "gfx950", "AMD Instinct MI350P", CheckStatus.WARNING),
+        ("rhel", "10.3", "gfx950", "AMD Instinct MI350P", CheckStatus.PASS),
+        ("debian", "13", "gfx950", "AMD Instinct MI350P", CheckStatus.PASS),
+        # SLES 16.1 (new in 10.2.0): not MI100
+        ("sles", "16.1", "gfx908", "AMD Instinct MI100", CheckStatus.WARNING),
+        ("sles", "16.1", "gfx942", "AMD Instinct MI300X", CheckStatus.PASS),
     ],
 )
 def test_os_gpu_restrictions_per_product(
@@ -244,6 +255,15 @@ def test_os_gpu_restrictions_per_product(
     if expected is CheckStatus.WARNING:
         assert "restricted to specific GPUs" in r.summary
         assert name in r.detail and "AMD: " in r.detail
+
+
+def test_radeon_rhel_follows_the_10_2_matrix() -> None:
+    # The 10.2.0 matrix lists only RHEL 10.3 and 9.9 for Radeon; 10.2 and 9.8 were dropped.
+    xtx = [gpu("gfx1100", "AMD Radeon RX 7900 XTX")]
+    assert validate_os(inp(h=host("rhel", "10.3", "6.12.0"), g=xtx), M).status is CheckStatus.PASS
+    assert validate_os(inp(h=host("rhel", "9.9", "5.14.0"), g=xtx), M).status is CheckStatus.PASS
+    assert validate_os(inp(h=host("rhel", "10.2", "6.12.0"), g=xtx), M).status is CheckStatus.WARNING
+    assert validate_os(inp(h=host("rhel", "10.2", "6.12.0")), M).status is CheckStatus.PASS  # Instinct
 
 
 def test_os_restriction_with_unidentified_product_is_a_warning_not_a_pass() -> None:
@@ -326,7 +346,7 @@ def test_kernel() -> None:
 
 def test_rocm_version() -> None:
     assert validate_rocm(inp(), M).status is CheckStatus.PASS
-    assert validate_rocm(inp(s=sw(rocm="10.1.0-25401")), M).status is CheckStatus.PASS
+    assert validate_rocm(inp(s=sw(rocm="10.2.0-26434")), M).status is CheckStatus.PASS
     assert validate_rocm(inp(s=sw(rocm="7.14.0")), M).status is CheckStatus.WARNING
     assert validate_rocm(inp(s=sw(rocm="6.2.4")), M).status is CheckStatus.WARNING
     newer = validate_rocm(inp(s=sw(rocm="11.0.0")), M)
@@ -349,10 +369,30 @@ def test_hip_consistency() -> None:
 
 
 @pytest.mark.parametrize(
+    "rocm,hip,expected,text",
+    [
+        # ROCm 10.x numbers HIP separately: 10.2.0 ships HIP 7.17.0 (real container: 7.17.26434-0000000)
+        ("10.2.0", "7.17.26434-0000000", CheckStatus.PASS, "ROCm 10.2.0 ships"),
+        ("10.1.0", "7.16.0", CheckStatus.PASS, "ROCm 10.1.0 ships"),
+        ("10.2.0", "7.16.0", CheckStatus.WARNING, "which ships HIP 7.17.0"),
+        ("10.2.0", "10.2.0", CheckStatus.WARNING, "which ships HIP 7.17.0"),
+        # a 10.x release this snapshot doesn't know: cannot be checked, never a PASS
+        ("10.3.0", "7.18.0", CheckStatus.WARNING, "could not be checked"),
+        # before 10.x, HIP shares ROCm's number
+        ("7.14.1", "7.14.25300", CheckStatus.PASS, "consistent"),
+        ("7.14.1", "7.13.0", CheckStatus.WARNING, "does not match ROCm 7.14.1"),
+    ],
+)
+def test_hip_version_for_rocm_10(rocm: str, hip: str, expected: CheckStatus, text: str) -> None:
+    r = validate_hip(inp(s=sw(rocm=rocm, hip=hip)), M)
+    assert r.status is expected and text in r.summary, r.summary
+
+
+@pytest.mark.parametrize(
     "torch,expected",
     [
-        (TorchInfo(installed=True, version="2.13.0+rocm10.1", hip_version="10.1.25401"), CheckStatus.PASS),
-        (TorchInfo(installed=True, version="2.9.0+rocm10.1", hip_version="10.1.25401"), CheckStatus.WARNING),
+        (TorchInfo(installed=True, version="2.13.0+rocm10.2", hip_version="7.17.26434"), CheckStatus.PASS),
+        (TorchInfo(installed=True, version="2.9.0+rocm10.2", hip_version="7.17.26434"), CheckStatus.WARNING),
         (TorchInfo(installed=True, version="2.13.0+rocm7.14", hip_version="7.14.1"), CheckStatus.WARNING),
         (TorchInfo(installed=True, version="2.13.0+cu128", cuda_version="12.8"), CheckStatus.WARNING),
         (TorchInfo(installed=False), CheckStatus.SKIPPED),
@@ -364,10 +404,10 @@ def test_pytorch(torch: TorchInfo | None, expected: CheckStatus) -> None:
 
 
 def test_evaluate_reports_sources_and_status() -> None:
-    torch = TorchInfo(installed=True, version="2.13.0", hip_version="10.1.25401")
+    torch = TorchInfo(installed=True, version="2.13.0", hip_version="7.17.26434")
     r = evaluate(host(), [gpu()], sw(torch=torch), M)
     assert r.status.value == "HEALTHY"
-    assert r.matrix_version == "10.1.0" and r.matrix_sources
+    assert r.matrix_version == "10.2.0" and r.matrix_sources
     assert all(c.category == "compatibility" for c in r.checks)
 
 

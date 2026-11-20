@@ -89,9 +89,9 @@ def test_rocminfo_failure_is_recorded(tmp_path: Path) -> None:
 
 def test_collect_software_reads_versions(mi300x_ctx: HostContext) -> None:
     sw = collect_software(mi300x_ctx)
-    assert sw.rocm_version == "10.1.0-25401"
-    assert sw.hip_runtime_version == "10.1.25401-a1b2c3d4"
-    assert sw.hip_compiler_version.startswith("AMD clang version 21")
+    assert sw.rocm_version == "10.2.0"
+    assert sw.hip_runtime_version == "7.17.26434-0000000"
+    assert sw.hip_compiler_version.startswith("AMD clang version 24")
     assert sw.amdgpu_driver_version == "31.60.0"
     assert sw.amdgpu_module_loaded is True
     assert {"HIP runtime", "rocBLAS", "hipBLAS", "RCCL", "MIOpen", "hipCUB"} <= set(sw.rocm_libraries)

@@ -141,6 +141,9 @@ class CompatibilityMatrix(BaseModel):
     notes: list[str] = Field(default_factory=list)
     release_versions: list[str] = Field(default_factory=list)
     release_versions_ref: list[str] = Field(default_factory=list)
+    # ROCm 10.x versions HIP separately (ROCm 10.2.0 ships HIP 7.17.0): ROCm release -> HIP version.
+    hip_versions: dict[str, str] = Field(default_factory=dict)
+    hip_versions_ref: list[str] = Field(default_factory=list)
     gpus: list[GpuEntry]
     targets_uncertain: dict[str, str] = Field(default_factory=dict)
     targets_uncertain_ref: list[str] = Field(default_factory=list)
@@ -170,6 +173,7 @@ class CompatibilityMatrix(BaseModel):
         """Every rule in the matrix, labelled, with its ``ref`` list."""
         out: dict[str, list[str]] = {
             "release_versions": self.release_versions_ref,
+            "hip_versions": self.hip_versions_ref,
             "targets_uncertain": self.targets_uncertain_ref,
             "amdgpu_driver": self.amdgpu_driver.ref,
         }

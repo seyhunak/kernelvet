@@ -238,7 +238,7 @@ The bundled matrix is
 
 * It was transcribed by hand from AMD's system-requirements page,
   compatibility-matrix page and release-history page.
-* It records the ROCm version (10.1.0), the date it was retrieved, and every
+* It records the ROCm version (10.2.0), the date it was retrieved, and every
   source URL.
 * Every rule carries a `ref` that points into a `references` table. Each
   reference gives the exact AMD page, section and row or footnote, its URL with
@@ -251,8 +251,8 @@ The bundled matrix is
 * A value earns PASS only if AMD lists it explicitly. Unlisted values are
   WARNING, and known incompatibilities are FAIL.
 * OS support that AMD limits to certain GPUs (for example Debian 13, Rocky
-  Linux 9, Oracle Linux, RHEL 8.10, SLES 16.0, and RHEL 10.1/9.7 without the
-  Radeon PRO V620) is checked per product, because GPUs with the same LLVM
+  Linux 9, Oracle Linux, RHEL 8.10, SLES 16.0/16.1, RHEL 10.1/9.7 without the
+  Radeon PRO V620, and Ubuntu 22.04 without the Instinct MI350P) is checked per product, because GPUs with the same LLVM
   target can differ. When KernelVet cannot tell which product a GPU is and the
   answer depends on it, the result is WARNING, never PASS.
 

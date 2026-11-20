@@ -7,7 +7,29 @@ include breaking changes.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-20
+
 ### Changed
+
+* **Compatibility data updated to ROCm 10.2.0** (released 2026-11-18), from
+  the 10.1.0 snapshot. Transcribed on 2026-11-20 from AMD's versioned 10.2.0
+  compatibility matrix, with every reference re-pointed at it.
+  * New: Instinct MI350P, Radeon PRO W7900D, RHEL 10.3 and 9.9, SLES 16.1,
+    amdgpu 31.70.0, PyTorch 2.15 and JAX 0.11.2.
+  * Removed, because the 10.2.0 matrix no longer lists them: amdgpu 30.20.1,
+    30.20.0 and 30.10.2 for Instinct, 31.50.0 for Radeon, and RHEL 10.2/9.8 for
+    Radeon (Radeon now lists RHEL 10.3 and 9.9 only).
+  * Products that AMD's 10.1.0 selector already listed but the old snapshot
+    missed are now included: MI350P, RX 9050, RX 9050 (4GB), RX 7600
+    (`gfx1102`, previously WARNING as ambiguous), Radeon AI PRO R9700S and
+    R9600.
+  * MI350P has its own OS rows: not Ubuntu 22.04, RHEL 10.0, RHEL 9.4,
+    Debian 12, Oracle Linux or Rocky Linux.
+  * Ryzen APU targets stay WARNING. The matrix names each APU's target, but an
+    iGPU name can map to more than one target (Radeon 840M is `gfx1152` or
+    `gfx1153`), and KernelVet does not check the APU OS and driver rows.
+  * The 7.14-era system-requirements page has not changed; its rules are kept,
+    and either page still counts.
 
 * **Readiness scoring is less biased and explains itself.**
   * Only source code is scored. Build-file findings are reported as
@@ -44,6 +66,13 @@ include breaking changes.
 
 ### Fixed
 
+* **`compat.hip` and `compat.pytorch` no longer report ROCm 10.x as a mixed
+  install.** ROCm 10.x numbers HIP separately (ROCm 10.2.0 ships HIP 7.17.0),
+  so comparing the HIP and ROCm version numbers warned on every correct 10.x
+  install. The matrix now records the HIP version each 10.x release ships
+  (`hip_versions`: 10.0.0 → 7.15.0, 10.1.0 → 7.16.0, 10.2.0 → 7.17.0, from AMD's
+  "ROCm Core SDK components" tables). A 10.x release the snapshot does not list
+  is a WARNING saying it could not be checked, never a PASS.
 * **GPU validation now requires observed GPU execution.** `migrate test` used
   to mark every passing test as "ran on GPU" whenever an AMD GPU was detected,
   so a test that never touched the GPU could pass stage 5. Tests now run with
@@ -182,7 +211,8 @@ First public release.
 - Not yet tested on real AMD GPU hardware: CI has no GPU runner, so the
   hardware paths have only been exercised against recorded-format fixtures.
 
-[Unreleased]: https://github.com/seyhunak/kernelvet/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/seyhunak/kernelvet/compare/v0.3.0...HEAD
+[0.3.0]: https://pypi.org/project/kernelvet/0.3.0/
 [0.2.0]: https://pypi.org/project/kernelvet/0.2.0/
 [0.1.1]: https://pypi.org/project/kernelvet/0.1.1/
 [0.1.0]: https://pypi.org/project/kernelvet/0.1.0/

@@ -154,7 +154,7 @@ def validate_os(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
             name,
             CheckStatus.WARNING,
             "Windows detected; this matrix snapshot covers Linux ROCm only",
-            detail="The 10.1.0 matrix lists Windows 11 25H2 for Radeon and Ryzen APUs via the HIP SDK; "
+            detail="The 10.2.0 matrix lists Windows 11 25H2 for Radeon and Ryzen APUs via the HIP SDK; "
             "KernelVet does not validate Windows configurations.",
             source=src,
         )
@@ -360,6 +360,22 @@ def validate_driver(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRes
     )
 
 
+def shipped_hip(m: CompatibilityMatrix, rocm: str) -> tuple[str | None, str | None]:
+    """``(release, HIP version)`` that a ROCm install should have.
+
+    ROCm 10.x numbers HIP separately (10.2.0 ships HIP 7.17.0), so those releases are looked up in
+    ``m.hip_versions``: ``release`` is the matching key. Earlier releases share ROCm's number, so
+    ``(None, rocm)``. A 10.x release the snapshot does not list gives ``(None, None)``: unknown.
+    """
+    for release, hip in m.hip_versions.items():
+        if same_release(rocm, release, depth=3) or same_release(rocm, release, depth=2):
+            return release, hip
+    v = parse_version(rocm)
+    if v is not None and v[0] >= 10:
+        return None, None
+    return None, rocm
+
+
 def validate_hip(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult:
     cid, name = "compat.hip", "HIP Compatibility"
     sw = inp.software
@@ -367,17 +383,34 @@ def validate_hip(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResult
         return _check(cid, name, CheckStatus.SKIPPED, "HIP toolchain not detected")
     if not sw.hip_runtime_version:
         return _check(cid, name, CheckStatus.WARNING, "hipcc found but the HIP version could not be read")
-    if sw.rocm_version and not same_release(sw.hip_runtime_version, sw.rocm_version):
-        return _check(
-            cid,
-            name,
-            CheckStatus.WARNING,
-            f"HIP {sw.hip_runtime_version} does not match ROCm {sw.rocm_version}",
-            remediation="Mixed ROCm installs detected; check PATH and ROCM_PATH point at one release",
-        )
-    return _check(
-        cid, name, CheckStatus.PASS, f"HIP {sw.hip_runtime_version} is consistent with the ROCm install"
-    )
+    hip, rocm = sw.hip_runtime_version, sw.rocm_version
+    if rocm:
+        release, expected = shipped_hip(m, rocm)
+        if expected is None:
+            return _check(
+                cid,
+                name,
+                CheckStatus.WARNING,
+                f"HIP {hip} could not be checked against ROCm {rocm}: ROCm 10.x numbers HIP separately "
+                "and this matrix snapshot does not list that release",
+                remediation="Update KernelVet, or check the ROCm Core SDK components table in AMD's docs",
+            )
+        src = m.cite(m.hip_versions_ref, "matrix") if release else None
+        if not same_release(hip, expected):
+            shipped = f", which ships HIP {expected}" if release else ""
+            return _check(
+                cid,
+                name,
+                CheckStatus.WARNING,
+                f"HIP {hip} does not match ROCm {rocm}{shipped}",
+                remediation="Mixed ROCm installs detected; check PATH and ROCM_PATH point at one release",
+                source=src,
+            )
+        if release:
+            return _check(
+                cid, name, CheckStatus.PASS, f"HIP {hip} is the version ROCm {release} ships", source=src
+            )
+    return _check(cid, name, CheckStatus.PASS, f"HIP {hip} is consistent with the ROCm install")
 
 
 # --------------------------------------------------------------------------- frameworks
@@ -414,7 +447,8 @@ def validate_pytorch(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckRe
             source=src,
         )
     sys_rocm = inp.software.rocm_version
-    if sys_rocm and not same_release(t.hip_version, sys_rocm):
+    expected_hip = shipped_hip(m, sys_rocm)[1] if sys_rocm else None
+    if expected_hip and not same_release(t.hip_version, expected_hip):
         return _check(
             cid,
             name,

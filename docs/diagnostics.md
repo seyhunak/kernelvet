@@ -86,12 +86,13 @@ runs on the GPU.
 | `compat.kernel` | the kernel's major.minor is listed for that OS | WARNING |
 | `compat.rocm` | the installed ROCm matches the snapshot's release | WARNING if older, newer or unknown |
 | `compat.driver` | the `amdgpu` version is listed | FAIL if the module isn't loaded on a GPU host; WARNING if unlisted |
-| `compat.hip` | the HIP version matches the ROCm install | WARNING on mixed installs |
+| `compat.hip` | the HIP version matches the ROCm install (ROCm 10.x ships HIP 7.x: 10.2.0 ships HIP 7.17.0, looked up in the snapshot) | WARNING on mixed installs, or for a 10.x release the snapshot doesn't list |
 | `compat.pytorch` | a ROCm PyTorch build whose version is listed | WARNING |
 
 **Per-GPU OS limits.** AMD supports some distributions only on certain GPUs.
 Examples: Debian 13 (MI355X, MI350X, MI325X, MI300X), Rocky Linux 9 (MI300X,
-MI300A), Oracle Linux 8 (MI300X), RHEL 10.1 and 9.7 (not Radeon PRO V620). These
+MI300A), Oracle Linux 8 (MI300X), RHEL 10.1 and 9.7 (not Radeon PRO V620),
+Ubuntu 22.04 (not Instinct MI350P). These
 are checked per product, because GPUs with the same target can differ. When the
 GPU's product can't be identified and the answer depends on it, the result is
 WARNING.

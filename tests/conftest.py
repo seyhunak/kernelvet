@@ -83,8 +83,8 @@ PROBE_OK = "\n".join(
 TORCH_ROCM = {
     "installed": True,
     "python": "3.12.3",
-    "version": "2.13.0+rocm10.1",
-    "hip_version": "10.1.25401",
+    "version": "2.15.0+rocm10.2",
+    "hip_version": "7.17.26434",
     "cuda_version": None,
 }
 TORCH_RUNTIME_OK = {
@@ -101,7 +101,7 @@ ALL_TOOLS = {t: f"/opt/rocm/bin/{t}" for t in ("rocminfo", "amd-smi", "hipcc", "
 def make_sysroot(
     root: Path,
     *,
-    rocm_version: str = "10.1.0-25401",
+    rocm_version: str = "10.2.0",
     driver: str | None = "31.60.0",
     gpu: bool = True,
     os_release: str | None = None,
@@ -145,10 +145,10 @@ def mi300x_runner(
 ) -> FakeRunner:
     r = FakeRunner(dict(ALL_TOOLS))
     r.on("amd-smi static --json", (HOST / "amd-smi-static.json").read_text())
-    r.on("amd-smi version", "AMDSMI Tool: 26.0.0+abc | AMDSMI Library version: 26.0.0 | ROCm version: 10.1.0")
+    r.on("amd-smi version", "AMDSMI Tool: 26.0.0+abc | AMDSMI Library version: 26.0.0 | ROCm version: 10.2.0")
     r.on("rocminfo", (HOST / "rocminfo.txt").read_text())
     r.on("hipcc --version", (HOST / "hipcc-version.txt").read_text())
-    r.on("hipconfig --version", "10.1.25401-a1b2c3d4")
+    r.on("hipconfig --version", "7.17.26434-0000000")
     r.on("rocprofv3 --version", "rocprofv3 1.0.0")
 
     def compile_probe(argv: list[str], kw: dict) -> CommandResult:
