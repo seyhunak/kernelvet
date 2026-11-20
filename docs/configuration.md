@@ -60,6 +60,12 @@ With `isolation = docker`, `migrate build` and `migrate test` run inside
 
 Only Docker itself is needed on the host; `hipcc` comes from the image.
 
+The container always runs as `linux/amd64`, because AMD publishes ROCm images
+for x86-64 only. On an Arm machine such as an Apple Silicon Mac, Docker
+emulates it: builds work but are slower, and there is no GPU, so tests can't
+pass stage 5. Pass `--offload-arch` there, since no GPU target can be
+detected.
+
 ## A custom compatibility matrix
 
 `--matrix FILE` or the `compatibility_matrix` setting replaces the bundled

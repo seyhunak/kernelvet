@@ -5,6 +5,12 @@ Migrated projects contain arbitrary user code and build scripts. With
 no network, all capabilities dropped, no privilege escalation, bounded
 processes and memory, and only the project directory mounted. GPU device nodes
 are passed through only for test execution.
+
+AMD publishes its ROCm images for x86-64 only, and ROCm itself runs only on
+x86-64 hosts. The container is therefore always started as ``linux/amd64``:
+a no-op on an x86-64 host, and on an Arm host (Apple Silicon) it makes Docker
+pull and emulate the x86-64 image instead of failing with "no matching
+manifest".
 """
 
 from __future__ import annotations
@@ -18,6 +24,8 @@ CONTAINER_WORKDIR = "/work"
 @dataclass
 class SandboxConfig:
     image: str = "rocm/dev-ubuntu-24.04:latest"
+    # ROCm images exist only for x86-64; None leaves the choice to Docker.
+    platform: str | None = "linux/amd64"
     network: str = "none"
     memory: str = "8g"
     pids_limit: int = 1024
@@ -36,6 +44,10 @@ def docker_argv(
         "docker",
         "run",
         "--rm",
+    ]
+    if cfg.platform:
+        argv.append(f"--platform={cfg.platform}")
+    argv += [
         f"--network={cfg.network}",
         "--cap-drop=ALL",
         "--security-opt=no-new-privileges",

@@ -13,6 +13,13 @@ include breaking changes.
   reference, how CUDA-to-HIP migration works, diagnostics and compatibility,
   reports and automation, and configuration. Linked from the README.
 
+### Fixed
+
+* Docker isolation now starts the container with `--platform=linux/amd64`.
+  AMD's ROCm images are x86-64 only, so on Arm hosts (Apple Silicon)
+  `migrate build`/`migrate test` with `isolation = docker` failed to pull the
+  image with "no matching manifest". On x86-64 hosts nothing changes.
+
 ## [0.2.0] - 2026-11-20
 
 ### Added

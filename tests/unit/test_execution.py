@@ -102,6 +102,16 @@ def test_docker_isolation_flags(tmp_path: Path) -> None:
     assert "--device=/dev/kfd" not in docker_argv(tmp_path, ["x"], cfg=SandboxConfig())
 
 
+def test_docker_isolation_pins_amd64_platform(tmp_path: Path) -> None:
+    # ROCm images are x86-64 only; without --platform an Arm host (Apple Silicon)
+    # fails to pull them with "no matching manifest".
+    argv = docker_argv(tmp_path, ["hipcc", "x.hip"], cfg=SandboxConfig(image="img"))
+    assert "--platform=linux/amd64" in argv
+    assert argv.index("--platform=linux/amd64") < argv.index("img")
+    unpinned = docker_argv(tmp_path, ["x"], cfg=SandboxConfig(image="img", platform=None))
+    assert not any(a.startswith("--platform") for a in unpinned)
+
+
 def test_tests_not_run_without_successful_build(tmp_path: Path) -> None:
     ctx = HostContext(runner=FakeRunner({}), root=tmp_path, system="Linux")
     assert run_tests(ctx, tmp_path, None).status is StageStatus.NOT_RUN
