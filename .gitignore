@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# KernelVet local output
+.scratch-*/
+*-hip/
+/reports/
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Logs
+*.log
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Personal AI-tool config
+opencode.json
