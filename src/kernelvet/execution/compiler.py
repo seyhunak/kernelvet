@@ -14,6 +14,7 @@ All output lives in ``<project>/.kernelvet/build``; sources are never edited.
 
 from __future__ import annotations
 
+import json
 import re
 import time
 from dataclasses import dataclass, field
@@ -67,6 +68,65 @@ class DirectBuild:
     notes: list[str] = field(default_factory=list)
 
 
+COMPILE_FLAGS_FILE = f"{STATE_DIR}/compile_flags.json"  # written by `migrate convert`
+
+
+def _load_compile_flags(project: Path) -> dict[str, list[str]]:
+    """Per-file flags from the CUDA project's compile_commands.json, if convert saved them."""
+    try:
+        data = json.loads((project / COMPILE_FLAGS_FILE).read_text())
+    except (OSError, ValueError):
+        return {}
+    files = data.get("files") if isinstance(data, dict) else None
+    if not isinstance(files, dict):
+        return {}
+    return {str(k): [str(f) for f in v] for k, v in files.items() if isinstance(v, list)}
+
+
+def _macro(flag: str) -> str:
+    return flag[2:].split("=", 1)[0]
+
+
+def merge_compile_flags(sources: list[str], table: dict[str, list[str]], notes: list[str]) -> list[str]:
+    """Combine the database flags of every file compiled in one hipcc command.
+
+    The first file (the one with ``main``) wins: its ``-std`` and macro values are
+    kept, and a conflicting ``-D`` from another file is dropped with a note.
+    Duplicate flags are removed while keeping include order.
+    """
+    out: list[str] = []
+    seen: set[tuple[str, ...]] = set()
+    macros: dict[str, str] = {}
+    std: str | None = None
+    for src in sources:
+        flags = table.get(src, [])
+        i = 0
+        while i < len(flags):
+            flag = flags[i]
+            item: tuple[str, ...] = (flag,)
+            if flag in ("-isystem", "-iquote", "-idirafter", "-include") and i + 1 < len(flags):
+                item = (flag, flags[i + 1])
+                i += 1
+            i += 1
+            if item[0].startswith("-std="):
+                if std is None:
+                    std = item[0]
+                    out.append(std)
+                continue
+            if item[0].startswith(("-D", "-U")):
+                name = _macro(item[0])
+                if name in macros and macros[name] != item[0]:
+                    notes.append(
+                        f"conflicting {macros[name]} and {item[0]} across files compiled together; kept {macros[name]}"
+                    )
+                    continue
+                macros[name] = item[0]
+            if item not in seen:
+                seen.add(item)
+                out += list(item)
+    return out
+
+
 def plan_direct_build(project: Path, targets: list[str]) -> DirectBuild:
     """Plan a direct hipcc build. All paths are project-relative."""
     inv = scan_project(project)
@@ -86,16 +146,45 @@ def plan_direct_build(project: Path, targets: list[str]) -> DirectBuild:
     )
     inc_flags = ["-I."] + [f"-I{d}" for d in incdirs if d != "."]
     arch = _arch_flags(targets)
+    table = _load_compile_flags(project)
+    if table:
+        compiled = plan.mains + plan.units
+        known = [s for s in compiled if s in table]
+        plan.notes.append(
+            f"include paths and defines from compile_commands.json for {len(known)} of {len(compiled)} "
+            "translation unit(s); the rest use guessed include paths"
+        )
+        outside = sorted({f for fl in table.values() for f in fl if f.startswith("-I/")})
+        if outside:
+            plan.notes.append(
+                f"{len(outside)} include path(s) from compile_commands.json are outside the project "
+                "and are not visible inside the Docker sandbox"
+            )
     if not plan.mains:
         plan.notes.append("no translation unit defines main(); compiled objects only")
         for u in plan.units:
             obj = f"{BUILD_SUBDIR}/{Path(u).with_suffix('.o').as_posix().replace('/', '_')}"
-            plan.commands.append(["hipcc", "-O2", *arch, *inc_flags, "-c", "-x", "hip", u, "-o", obj])
+            db = merge_compile_flags([u], table, plan.notes)
+            plan.commands.append(["hipcc", "-O2", *arch, *db, *inc_flags, "-c", "-x", "hip", u, "-o", obj])
         return plan
     for main_src in plan.mains:
         exe = f"{BUILD_SUBDIR}/{Path(main_src).stem}"
+        db = merge_compile_flags([main_src, *plan.units], table, plan.notes)
         plan.commands.append(
-            ["hipcc", "-O2", *arch, *inc_flags, "-x", "hip", main_src, *plan.units, "-o", exe, *plan.libs]
+            [
+                "hipcc",
+                "-O2",
+                *arch,
+                *db,
+                *inc_flags,
+                "-x",
+                "hip",
+                main_src,
+                *plan.units,
+                "-o",
+                exe,
+                *plan.libs,
+            ]
         )
         plan.executables.append(exe)
     return plan

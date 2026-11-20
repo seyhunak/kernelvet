@@ -147,19 +147,23 @@ The pipeline is explained in [How CUDA-to-HIP migration works](migration.md).
 ### migrate analyze
 
 ```bash
-kernelvet migrate analyze CUDA_DIR [-f FORMAT] [-o FILE]
+kernelvet migrate analyze CUDA_DIR [--compile-commands FILE] [-f FORMAT] [-o FILE]
 ```
 
 Read-only. Builds the inventory (files, build systems, NVIDIA dependencies,
 tests), classifies every CUDA construct as `AUTO_CONVERTIBLE`,
 `REQUIRES_VERIFICATION`, `MANUAL_INTERVENTION` or `UNSUPPORTED`, and computes the
-readiness score. `-f sarif` exports the findings for code-scanning tools.
+readiness score. It also reports the project's `compile_commands.json` and
+which translation units it covers; see
+[Using compile_commands.json](migration.md#using-compile_commandsjson).
+`-f sarif` exports the findings for code-scanning tools.
 
 ### migrate plan
 
 ```bash
 kernelvet migrate plan CUDA_DIR [--translator auto|hipify-clang|hipify-perl]
-                       [--offload-arch gfx942 ...] [-f FORMAT] [-o FILE]
+                       [--offload-arch gfx942 ...] [--compile-commands FILE]
+                       [-f FORMAT] [-o FILE]
 ```
 
 A dry run of the whole migration: the translator and why it was chosen, the
@@ -172,7 +176,7 @@ files to convert, dependency swaps, manual changes and blockers.
 ```bash
 kernelvet migrate convert CUDA_DIR -o HIP_DIR [--dry-run] [--force]
                           [--translator auto|hipify-clang|hipify-perl]
-                          [-f FORMAT] [--report FILE]
+                          [--compile-commands FILE] [-f FORMAT] [--report FILE]
 ```
 
 | Option | Effect |
@@ -182,6 +186,7 @@ kernelvet migrate convert CUDA_DIR -o HIP_DIR [--dry-run] [--force]
 | `--force` | allow a non-empty output directory |
 | `--translator` | override the `hipify_preference` setting |
 | `--report FILE` | also write a report file (format from the extension) |
+| `--compile-commands FILE` | the CUDA project's `compile_commands.json` (default: found in the project or a `build/` directory) |
 
 Runs AMD HIPIFY file by file. The CUDA project is never modified, and an output
 directory that is, contains or is inside the source is refused. The output

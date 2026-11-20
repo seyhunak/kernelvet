@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from kernelvet.diagnose.software import torch_summary
 from kernelvet.models.common import Evidence
-from kernelvet.models.migration import StageStatus, TestCaseResult, VerificationStages
+from kernelvet.models.migration import CompileDbSummary, StageStatus, TestCaseResult, VerificationStages
 from kernelvet.models.system import GpuDevice, SoftwareInfo
 
 
@@ -83,3 +83,12 @@ def gpu_cell(case: TestCaseResult) -> str:
     if case.gpu_evidence is Evidence.DETECTED:
         return "GPU detected, no kernel launch seen"
     return "no AMD GPU"
+
+
+def compile_db_line(db: CompileDbSummary | None) -> str:
+    if db is None:
+        return "none (flags are guessed from the directory layout)"
+    if db.error:
+        return f"{db.path}: unusable ({db.error})"
+    total = len(db.covered) + len(db.uncovered)
+    return f"{db.path} ({db.entries} entries; covers {len(db.covered)} of {total} CUDA translation unit(s))"

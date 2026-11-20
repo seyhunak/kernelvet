@@ -58,6 +58,13 @@ app = typer.Typer(
 ProjectArg = typer.Argument(..., help="Project directory", show_default=False)
 TranslatorOpt = typer.Option(None, "--translator", help="Which HIPIFY to use (default: config value)")
 IsolationOpt = typer.Option(None, "--isolation", help="none or docker (default from config)")
+CompileDbOpt = typer.Option(
+    None,
+    "--compile-commands",
+    help="The CUDA project's compile_commands.json (default: found in the project or a build/ directory)",
+    exists=True,
+    dir_okay=False,
+)
 
 
 def _dir(path: Path) -> Path:
@@ -91,14 +98,17 @@ def _targets(ctx: HostContext, explicit: list[str] | None) -> list[str]:
 
 @app.command()
 def analyze(
-    project: Path = ProjectArg, fmt: OutputFormat | None = FormatOpt, output: Path | None = OutputOpt
+    project: Path = ProjectArg,
+    fmt: OutputFormat | None = FormatOpt,
+    output: Path | None = OutputOpt,
+    compile_commands: Path | None = CompileDbOpt,
 ) -> None:
     """Scan a CUDA project and classify every CUDA construct (read-only)."""
     root = _dir(project)
     fmt = resolve_format(fmt, output)
     with progress() as cb:
         cb("Scanning project", 0.3)
-        analysis = analyze_project(root)
+        analysis = analyze_project(root, compile_db=compile_commands)
     report = MigrationReport(project=str(root), analysis=analysis)
     _record(root, "analyzed", f"readiness {analysis.readiness.score}/100, {len(analysis.findings)} findings")
     emit(report, fmt, output, lambda: render_migration(report))
@@ -111,6 +121,7 @@ def plan(
     output: Path | None = OutputOpt,
     translator: Translator | None = TranslatorOpt,
     offload_arch: list[str] | None = typer.Option(None, "--offload-arch", help="Target gfx architecture(s)"),
+    compile_commands: Path | None = CompileDbOpt,
 ) -> None:
     """Produce a migration plan before anything is modified (a dry run of the whole migration)."""
     s = settings_or_exit()
@@ -119,7 +130,7 @@ def plan(
     ctx = HostContext(timeout=s.command_timeout)
     with progress() as cb:
         cb("Analyzing project", 0.3)
-        analysis = analyze_project(root)
+        analysis = analyze_project(root, compile_db=compile_commands)
         cb("Planning", 0.8)
         p = build_plan(
             analysis,
@@ -145,6 +156,7 @@ def convert(
     translator: Translator | None = TranslatorOpt,
     fmt: OutputFormat | None = FormatOpt,
     report_file: Path | None = typer.Option(None, "--report", help="Also write a report file"),
+    compile_commands: Path | None = CompileDbOpt,
 ) -> None:
     """Convert CUDA sources to HIP with AMD HIPIFY into a separate directory (sources are never modified).
 
@@ -154,7 +166,7 @@ def convert(
     s = settings_or_exit()
     root = _dir(project)
     ctx = HostContext(timeout=s.command_timeout)
-    analysis = analyze_project(root)
+    analysis = analyze_project(root, compile_db=compile_commands)
     try:
         with progress() as cb:
             result = convert_project(

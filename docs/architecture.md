@@ -31,7 +31,7 @@ the Pydantic model it gets back.
 | `utils/redact.py` | Removes secrets (tokens, keys, passwords, credentials in URLs) from command output, logs and reports. |
 | `diagnose/` | Collects the host (`system.py`), GPUs (`hardware.py`: amd-smi + rocminfo + sysfs, merged by PCI bus) and software (`software.py`). Runs the HIP and PyTorch probes on the device (`runtime.py`). `engine.py` orchestrates all of it. |
 | `compatibility/` | The bundled AMD matrix snapshot (`data/rocm_matrix.json`), its loader, one validator per dimension (GPU, OS, kernel, ROCm, driver, HIP, PyTorch) and `evaluate()`. |
-| `migration/` | Rule catalogue (`rules.py`), project scanner, analyzer and readiness score, planner, HIPIFY integration, post-conversion auditor and the workflow that turns per-stage state into the five verification stages. |
+| `migration/` | Rule catalogue (`rules.py`), project scanner, analyzer and readiness score, planner, `compile_commands.json` reader (`compile_db.py`), HIPIFY integration, post-conversion auditor and the workflow that turns per-stage state into the five verification stages. |
 | `execution/` | Building (`compiler.py`: a HIP-aware CMake build, otherwise a planned direct `hipcc` build), running tests (`runner.py`) and the optional Docker sandbox (`sandbox.py`). |
 | `benchmark/` | HIP and PyTorch workloads, compiled and run for real; an optional `rocprofv3` pass. |
 | `reporting/` | Renderers: Rich terminal, JSON, Markdown, self-contained HTML, SARIF 2.1.0. `loader.py` reads a saved JSON report back into its model. |

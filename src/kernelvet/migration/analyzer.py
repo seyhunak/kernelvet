@@ -68,8 +68,8 @@ def readiness(findings: list[Finding]) -> ReadinessScore:
     return ReadinessScore(score=score, total_findings=total, by_category=by_cat)
 
 
-def analyze_project(path: str | Path) -> AnalysisResult:
-    inv = scan_project(path)
+def analyze_project(path: str | Path, *, compile_db: str | Path | None = None) -> AnalysisResult:
+    inv = scan_project(path, compile_db)
     findings = scan_findings(Path(inv.root), inv, phase="analyze")
     return AnalysisResult(inventory=inv, findings=findings, readiness=readiness(findings))
 

@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from kernelvet.migration.compile_db import CompileDatabase, CompileDbError, load_compile_db, rebase_flags
 from kernelvet.migration.scanner import iter_project_files
 from kernelvet.models.migration import ConversionResult, FileConversion, FileKind, ProjectInventory
 from kernelvet.utils.paths import safe_output_dir
@@ -92,7 +93,7 @@ def choose_translator(
     if clang and cuda:
         why = "hipify-clang is installed and CUDA headers were found; it parses code semantically"
         if has_compile_db:
-            why += " (compile_commands.json available for include paths)"
+            why += "; each file is parsed with its flags from compile_commands.json"
         return TranslatorChoice("hipify-clang", why, cuda)
     if perl:
         why = "hipify-perl is installed (regex-based; no CUDA toolkit needed)"
@@ -145,13 +146,29 @@ def _include_flags(root: Path, inv: ProjectInventory) -> list[str]:
     return flags
 
 
-def translator_argv(choice: TranslatorChoice, src: Path, out: Path, includes: list[str]) -> list[str]:
+def translator_argv(
+    choice: TranslatorChoice,
+    src: Path,
+    out: Path,
+    includes: list[str],
+    db_flags: list[str] | None = None,
+) -> list[str]:
+    """``db_flags`` are the file's own flags from compile_commands.json (hipify-clang only).
+
+    They come first, so the project's real include order and defines win; the
+    guessed includes stay as a fallback for headers the database doesn't mention.
+    The database is not passed with ``-p``: its commands are nvcc commands, and
+    clang rejects nvcc-only flags such as ``-gencode`` or ``--expt-relaxed-constexpr``.
+    """
     if choice.name == "hipify-perl":
         return ["hipify-perl", "-print-stats", f"-o={out}", str(src)]
     argv = ["hipify-clang", str(src), "-o", str(out), "--print-stats"]
     if choice.cuda_path:
         argv.append(f"--cuda-path={choice.cuda_path}")
-    return [*argv, "--", "-std=c++17", *includes]
+    flags = list(db_flags or [])
+    if not any(f.startswith("-std=") for f in flags):
+        flags.insert(0, "-std=c++17")
+    return [*argv, "--", *flags, *includes]
 
 
 def translator_version(ctx: HostContext, name: str) -> str | None:
@@ -172,7 +189,8 @@ def convert_project(
 ) -> ConversionResult:
     root = Path(inv.root)
     out_root = safe_output_dir(root, output, allow_existing=force)
-    choice = choose_translator(ctx, preference, has_compile_db=(root / "compile_commands.json").exists())
+    db = _load_db(root, inv)
+    choice = choose_translator(ctx, preference, has_compile_db=db is not None)
     if choice.name is None:
         raise HipifyUnavailable(choice.reason)
 
@@ -183,6 +201,7 @@ def convert_project(
         translator=choice.name,
         translator_version=None if dry_run else translator_version(ctx, choice.name),
         dry_run=dry_run,
+        compile_db=str(db.path) if db else None,
     )
     includes = _include_flags(root, inv)
     files = [p for p in iter_project_files(root)]
@@ -190,6 +209,7 @@ def convert_project(
         f"translator: {choice.name} ({choice.reason})",
         f"source: {root}",
         f"output: {out_root}",
+        f"compile database: {db.path} ({len(db.entries)} entries)" if db else "compile database: none",
         "",
     ]
     for i, src in enumerate(files):
@@ -198,10 +218,20 @@ def convert_project(
         kind = kinds.get(rel)
         progress(f"{'Planning' if dry_run else 'Converting'} {rel}", (i + 1) / max(len(files), 1))
         if kind in TRANSLATE_KINDS:
-            argv = translator_argv(choice, src, dst, includes)
+            db_flags = db.flags_for(src) if db and choice.name == "hipify-clang" else None
+            flags_from = None
+            if choice.name == "hipify-clang":
+                flags_from = "compile_commands.json" if db_flags is not None else "guessed"
+            argv = translator_argv(choice, src, dst, includes, db_flags)
             if dry_run:
                 result.files.append(
-                    FileConversion(source=rel, output=str(dst), translator=choice.name, status="planned")
+                    FileConversion(
+                        source=rel,
+                        output=str(dst),
+                        translator=choice.name,
+                        status="planned",
+                        flags_from=flags_from,
+                    )
                 )
                 log_lines.append("would run: " + " ".join(argv))
                 continue
@@ -226,6 +256,7 @@ def convert_project(
                     errors=errors,
                     replacements=converted,
                     unconverted=unconverted,
+                    flags_from=flags_from,
                 )
             )
             log_lines += [
@@ -264,5 +295,38 @@ def convert_project(
         (log_dir / "conversion.log").write_text("\n".join(log_lines) + "\n")
         (log_dir / "conversion.json").write_text(result.model_dump_json(indent=2))
         (log_dir / "source.json").write_text(json.dumps({"source_project": str(root)}))
+        if db:
+            _save_compile_flags(log_dir, root, db)
         result.log_path = str(log_dir / "conversion.log")
     return result
+
+
+COMPILE_FLAGS_FILE = "compile_flags.json"
+
+
+def _load_db(root: Path, inv: ProjectInventory) -> CompileDatabase | None:
+    if not inv.compile_db or inv.compile_db.error:
+        return None
+    path = Path(inv.compile_db.path)
+    try:
+        return load_compile_db(path if path.is_absolute() else root / path)
+    except CompileDbError:
+        return None
+
+
+def _save_compile_flags(log_dir: Path, root: Path, db: CompileDatabase) -> None:
+    """Per-file flags for the direct hipcc build, with project paths made relative.
+
+    The migrated tree mirrors the source tree, so a path relative to the source
+    root is the same path in the HIP project (on the host and inside Docker).
+    """
+    src_root = root.resolve()
+    flags: dict[str, list[str]] = {}
+    for file, entry in sorted(db.entries.items()):
+        try:
+            rel = file.relative_to(src_root).as_posix()
+        except ValueError:
+            continue  # a file outside this project
+        flags[rel] = rebase_flags(entry.flags, src_root)
+    payload = {"source": str(db.path), "files": flags}
+    (log_dir / COMPILE_FLAGS_FILE).write_text(json.dumps(payload, indent=2))

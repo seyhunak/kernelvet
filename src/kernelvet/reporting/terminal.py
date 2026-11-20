@@ -17,6 +17,7 @@ from kernelvet.models.report import (
 )
 from kernelvet.models.system import GpuDevice, HostInfo, SoftwareInfo
 from kernelvet.reporting.common import (
+    compile_db_line,
     fmt_bytes,
     gpu_cell,
     gpu_label,
@@ -209,6 +210,7 @@ def render_migration(r: MigrationReport) -> RenderableType:
                     ("Files", f"{len(inv.files)} ({inv.total_lines} lines)"),
                     ("CUDA-related", str(len(inv.cuda_files))),
                     ("Build systems", ", ".join(b.kind for b in inv.build_systems) or "none"),
+                    ("Compile database", compile_db_line(inv.compile_db)),
                     ("Dependencies", ", ".join(d.name for d in inv.dependencies) or "none"),
                     ("Tests", str(len(inv.test_files))),
                     ("Readiness", f"{a.readiness.score}/100 (source conversion coverage only)"),

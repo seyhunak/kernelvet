@@ -94,6 +94,44 @@ translator is installed.
 | `hipify-clang` | always `hipify-clang`; fails if it or the CUDA headers are missing |
 | `hipify-perl` | always `hipify-perl` |
 
+### Using compile_commands.json
+
+A compilation database (`compile_commands.json`) records the exact command used
+to compile each file. It is the only reliable source of a file's include
+paths, `-D` defines and language standard. Without one, KernelVet guesses
+include paths from the directory layout, which misses generated headers,
+third-party include trees and defines that select code paths.
+
+Generate one from the CUDA project, for example:
+
+```bash
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON   # CMake
+bear -- make                                             # Make, with Bear
+```
+
+KernelVet looks for it in the project root and in `build/`, `build-*`,
+`cmake-build-*`, `out/` and one level below them. `--compile-commands FILE`
+on `analyze`, `plan` and `convert` points at one somewhere else.
+
+* `analyze` and `plan` show which CUDA translation units it covers. Files it
+  doesn't list fall back to guessed flags. If a CMake project has no database,
+  the plan suggests exporting one.
+* `convert` with `hipify-clang` parses each listed file with that file's own
+  flags. Each file's result records whether its flags came from
+  `compile_commands.json` or were guessed. `hipify-perl` works on text and
+  doesn't use compiler flags.
+* The flags are saved to `HIP_DIR/.kernelvet/compile_flags.json`, with project
+  paths rewritten relative to the HIP project, and the direct `hipcc` build
+  reuses them.
+
+Only flags that clang understands and that change what the code means are
+used: `-I`, `-isystem`, `-iquote`, `-idirafter`, `-D`, `-U`, `-std` and
+`-include`, with nvcc's long spellings (`--include-path`, `--define-macro`, …)
+normalised. nvcc-only flags (`-arch`, `-gencode`, `-Xcompiler`,
+`--expt-relaxed-constexpr`) and optimisation or warning flags are dropped.
+For this reason the database is not passed to `hipify-clang` with `-p`: clang
+would reject the nvcc flags in it.
+
 ## 3. Convert: AMD HIPIFY runs
 
 `migrate convert CUDA_DIR -o HIP_DIR` runs HIPIFY file by file.
@@ -131,7 +169,9 @@ the code is correct**; only compiling and running tests can show that.
 1. If the project's `CMakeLists.txt` already targets HIP (`enable_language(HIP)`
    or `LANGUAGES … HIP`) and `cmake` is available, KernelVet configures and
    builds it.
-2. Otherwise it builds directly with `hipcc`. Every source with a `main` becomes
+2. Otherwise it builds directly with `hipcc`, with the include paths and
+   defines from `compile_commands.json` when `convert` saved them (see
+   [Using compile_commands.json](#using-compile_commandsjson)). Every source with a `main` becomes
    an executable, linked with the shared sources and with the ROCm libraries
    its includes need. A HIP `CMakeLists` that reproduces this build is written
    to `.kernelvet/CMakeLists.generated.txt` for you to adopt.

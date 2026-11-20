@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from kernelvet.migration.hipify import TRANSLATE_KINDS, choose_translator
 from kernelvet.models.migration import (
     AnalysisResult,
@@ -24,8 +22,9 @@ def build_plan(
 ) -> MigrationPlan:
     ctx = ctx or HostContext()
     inv = analysis.inventory
-    root = Path(inv.root)
-    choice = choose_translator(ctx, preference, has_compile_db=(root / "compile_commands.json").exists())
+    db = inv.compile_db
+    db_usable = bool(db and not db.error)
+    choice = choose_translator(ctx, preference, has_compile_db=db_usable)
     to_migrate = [f.path for f in inv.files if f.kind in TRANSLATE_KINDS]
     to_copy = [f.path for f in inv.files if f.kind not in TRANSLATE_KINDS]
 
@@ -69,6 +68,30 @@ def build_plan(
 
     if choice.name is None:
         add("Install HIPIFY", choice.reason, blocking=True)
+    if db and db.error:
+        add(
+            "Fix compile_commands.json",
+            f"{db.path} could not be used: {db.error}. Conversion will guess flags.",
+        )
+    elif db:
+        uses = (
+            "hipify-clang parses each listed file with its own include paths and defines, and the direct "
+            "hipcc build reuses them"
+            if choice.name == "hipify-clang"
+            else "hipify-perl does not use compiler flags; the direct hipcc build still reuses them"
+        )
+        detail = f"{db.path}: {db.entries} entries; {len(db.covered)} of {len(db.covered) + len(db.uncovered)} CUDA translation unit(s) covered. {uses}."
+        if db.uncovered:
+            detail += " Not in the database (flags will be guessed): " + ", ".join(db.uncovered[:10])
+            detail += " …" if len(db.uncovered) > 10 else ""
+        add("Use compile_commands.json", detail, db.uncovered)
+    elif any(b.kind == "cmake" for b in inv.build_systems):
+        add(
+            "Optional: export compile_commands.json",
+            "No compilation database was found. Configuring the CUDA project with "
+            "`cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON` writes one; with it, hipify-clang and the direct "
+            "build use each file's real include paths and defines instead of guessing them.",
+        )
     add(
         "Convert sources with " + (choice.name or "HIPIFY"),
         f"{len(to_migrate)} CUDA-related file(s) are translated into a separate output tree; "

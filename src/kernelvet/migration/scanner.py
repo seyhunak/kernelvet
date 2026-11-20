@@ -6,9 +6,11 @@ import os
 import re
 from pathlib import Path
 
+from kernelvet.migration.compile_db import CompileDbError, find_compile_db, load_compile_db
 from kernelvet.migration.rules import strip_comments, uses_cuda
 from kernelvet.models.migration import (
     BuildSystem,
+    CompileDbSummary,
     Dependency,
     FileKind,
     ProjectInventory,
@@ -167,7 +169,7 @@ def _build_system(kind: FileKind, rel: str, text: str) -> BuildSystem:
     return BuildSystem(kind=k, files=[rel], uses_cuda_language=cuda_lang, cuda_arch_flags=arch, notes=notes)
 
 
-def scan_project(path: str | Path) -> ProjectInventory:
+def scan_project(path: str | Path, compile_db: str | Path | None = None) -> ProjectInventory:
     root = existing_dir(path)
     inv = ProjectInventory(root=str(root))
     builds: dict[str, BuildSystem] = {}
@@ -231,4 +233,32 @@ def scan_project(path: str | Path) -> ProjectInventory:
                     name=name, kind=dep_kind, evidence=dep_hits[name][:20], hip_alternative=alt, note=note
                 )
             )
+    inv.compile_db = summarize_compile_db(root, inv, compile_db)
     return inv
+
+
+# Files that are compiled on their own and so should have a compile_commands.json entry.
+_TRANSLATION_UNIT_KINDS = (FileKind.CUDA_SOURCE, FileKind.CUDA_RELATED_CPP)
+
+
+def summarize_compile_db(
+    root: Path, inv: ProjectInventory, explicit: str | Path | None = None
+) -> CompileDbSummary | None:
+    path = Path(explicit).expanduser().resolve() if explicit else find_compile_db(root)
+    if path is None:
+        return None
+    shown = path.relative_to(root.resolve()).as_posix() if within(root, path) else str(path)
+    if not path.is_file():
+        return CompileDbSummary(path=shown, error="file not found")
+    try:
+        db = load_compile_db(path)
+    except CompileDbError as exc:
+        return CompileDbSummary(path=shown, error=str(exc))
+    units = [f.path for f in inv.files if f.kind in _TRANSLATION_UNIT_KINDS]
+    covered = [u for u in units if db.covers(root / u)]
+    return CompileDbSummary(
+        path=shown,
+        entries=len(db.entries),
+        covered=covered,
+        uncovered=[u for u in units if u not in covered],
+    )

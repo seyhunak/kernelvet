@@ -14,6 +14,7 @@ from kernelvet.models.report import (
 )
 from kernelvet.models.system import GpuDevice, HostInfo, SoftwareInfo
 from kernelvet.reporting.common import (
+    compile_db_line,
     fmt_bytes,
     gpu_cell,
     gpu_label,
@@ -180,6 +181,7 @@ def migration_markdown(r: MigrationReport) -> str:
             "",
             f"- Files scanned: {len(inv.files)} ({inv.total_lines} lines), CUDA-related: {len(inv.cuda_files)}",
             f"- Build systems: {', '.join(b.kind for b in inv.build_systems) or 'none detected'}",
+            f"- Compile database: {compile_db_line(inv.compile_db)}",
             f"- Tests: {len(inv.test_files)} file(s)",
             "",
             "### Dependencies",

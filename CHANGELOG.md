@@ -9,6 +9,20 @@ include breaking changes.
 
 ### Added
 
+* **`compile_commands.json` support.** KernelVet finds the CUDA project's
+  compilation database (in the root or a `build*/`, `cmake-build-*` or `out/`
+  directory), or takes one with `--compile-commands FILE` on
+  `migrate analyze`, `plan` and `convert`.
+  * `hipify-clang` parses each listed file with its own include paths, defines
+    and `-std`, instead of guessed include paths.
+  * The flags are saved to `.kernelvet/compile_flags.json`, relative to the HIP
+    project, and reused by the direct `hipcc` build.
+  * nvcc-only flags (`-arch`, `-gencode`, `-Xcompiler`, ...) are filtered out.
+  * Reports and the plan show coverage. Each converted file records whether its
+    flags came from the database or were guessed.
+  * Before this change, a database in the project root was only mentioned in
+    the translator reason and never read.
+
 * User documentation in `docs/`: getting started, use cases, a command
   reference, how CUDA-to-HIP migration works, diagnostics and compatibility,
   reports and automation, and configuration. Linked from the README.

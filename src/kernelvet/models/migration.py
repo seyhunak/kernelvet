@@ -80,6 +80,17 @@ class BuildSystem(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class CompileDbSummary(BaseModel):
+    """The project's compile_commands.json, if one was found or given."""
+
+    path: str
+    entries: int = 0
+    # Translation units (CUDA sources and C++ files using CUDA) with / without an entry.
+    covered: list[str] = Field(default_factory=list)
+    uncovered: list[str] = Field(default_factory=list)
+    error: str | None = None  # set when the file could not be used
+
+
 class ProjectInventory(BaseModel):
     root: str
     files: list[SourceFile] = Field(default_factory=list)
@@ -88,6 +99,7 @@ class ProjectInventory(BaseModel):
     test_files: list[str] = Field(default_factory=list)
     total_lines: int = 0
     skipped: list[str] = Field(default_factory=list, description="Files skipped and why")
+    compile_db: CompileDbSummary | None = None
 
     def files_of(self, *kinds: FileKind) -> list[SourceFile]:
         return [f for f in self.files if f.kind in kinds]
@@ -156,6 +168,8 @@ class FileConversion(BaseModel):
     errors: list[str] = Field(default_factory=list)
     replacements: int | None = None
     unconverted: int | None = None
+    # hipify-clang only: "compile_commands.json" when the file's own flags were used, else "guessed".
+    flags_from: str | None = None
 
 
 class ConversionResult(BaseModel):
@@ -166,6 +180,7 @@ class ConversionResult(BaseModel):
     dry_run: bool = False
     files: list[FileConversion] = Field(default_factory=list)
     log_path: str | None = None
+    compile_db: str | None = None  # compile_commands.json used for per-file flags
 
     @property
     def failed(self) -> list[FileConversion]:
