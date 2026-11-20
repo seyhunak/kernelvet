@@ -1,0 +1,30 @@
+KernelVet
+Copyright 2026 KernelVet contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Disclaimer
+----------
+KernelVet is an independent open-source community project. It is not
+affiliated with, sponsored by or endorsed by Advanced Micro Devices, Inc. (AMD)
+or NVIDIA Corporation, is not an AMD product and is not a certification
+authority. Its results are not an official statement of support by AMD.
+
+Trademarks
+----------
+AMD, AMD ROCm, AMD Instinct, AMD CDNA, AMD RDNA, Radeon and Ryzen are
+trademarks of Advanced Micro Devices, Inc.
+
+NVIDIA and CUDA are trademarks or registered trademarks of NVIDIA Corporation
+in the U.S. and other countries.
+
+Other names are used for identification purposes only and may be trademarks of
+their respective owners. KernelVet uses these names only to identify the
+hardware and software it works with; their use does not imply affiliation or
+endorsement.
+
+Third-party data
+----------------
+src/kernelvet/compatibility/data/rocm_matrix.json contains facts transcribed by
+hand from AMD's public ROCm documentation (https://rocm.docs.amd.com/). Each
+rule cites the page, section, ROCm version and retrieval date it came from.
