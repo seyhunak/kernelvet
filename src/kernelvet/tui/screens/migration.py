@@ -21,7 +21,7 @@ from textual.widgets import (
     TabPane,
 )
 
-from kernelvet.diagnose.software import detect_libraries
+from kernelvet.diagnose.software import installed_libraries
 from kernelvet.execution.compiler import build_project
 from kernelvet.execution.runner import run_tests
 from kernelvet.execution.sandbox import SandboxConfig
@@ -398,11 +398,8 @@ Filter findings by category with the selector on the Findings tab.
     @work(thread=True, exclusive=True, group="migration", exit_on_error=False)
     def _audit_worker(self, out: str) -> None:
         ctx = self.state.ctx
-        rocm = ctx.rocm_path()
         try:
-            result = audit_project(
-                out, installed_libraries=detect_libraries(ctx, rocm) if ctx.exists(rocm) else None
-            )
+            result = audit_project(out, installed_libraries=installed_libraries(ctx))
             save_state(out, "audit", result)
         except Exception as exc:
             self.app.call_from_thread(self._error, "Audit failed", exc)

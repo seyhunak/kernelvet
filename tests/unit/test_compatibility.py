@@ -383,6 +383,8 @@ def test_rocm_version() -> None:
     assert validate_rocm(inp(s=sw(rocm="10.2.0-26434")), M).status is CheckStatus.PASS
     assert validate_rocm(inp(s=sw(rocm="7.14.0")), M).status is CheckStatus.WARNING
     assert validate_rocm(inp(s=sw(rocm="6.2.4")), M).status is CheckStatus.WARNING
+    nightly = validate_rocm(inp(s=sw(rocm="10.2.0a20261118")), M)  # `rocm-sdk version` of a nightly
+    assert nightly.status is CheckStatus.WARNING and "pre-release" in nightly.summary
     newer = validate_rocm(inp(s=sw(rocm="11.0.0")), M)
     assert newer.status is CheckStatus.WARNING and "newer" in newer.summary
     assert validate_rocm(inp(s=sw(rocm=None)), M).status is CheckStatus.SKIPPED

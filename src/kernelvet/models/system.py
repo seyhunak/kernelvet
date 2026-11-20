@@ -73,6 +73,8 @@ class TorchInfo(BaseModel):
 class SoftwareInfo(BaseModel):
     rocm_version: str | None = None
     rocm_path: str | None = None
+    # how ROCm was found: "ROCM_PATH", "HIP_PATH", "/opt/rocm" or "rocm-sdk" (TheRock Python packages)
+    rocm_source: str | None = None
     hip_runtime_version: str | None = None
     hip_compiler_version: str | None = None
     amdgpu_driver_version: str | None = None

@@ -48,6 +48,13 @@ def _c(
     )
 
 
+def _rocm_where(sw: SoftwareInfo) -> str:
+    if sw.rocm_source == "rocm-sdk":
+        where = f"at {sw.rocm_path} " if sw.rocm_path else ""
+        return f"{where}(TheRock Python packages, found with rocm-sdk)".strip()
+    return f"at {sw.rocm_path}" if sw.rocm_path else ""
+
+
 def static_checks(host: HostInfo, hw: HardwareProbe, sw: SoftwareInfo) -> list[CheckResult]:
     checks: list[CheckResult] = []
     linux = host.os_name not in ("macOS", "Windows", "Darwin")
@@ -135,17 +142,17 @@ def static_checks(host: HostInfo, hw: HardwareProbe, sw: SoftwareInfo) -> list[C
                 "ROCm Installation",
                 "software",
                 CheckStatus.PASS,
-                f"ROCm {sw.rocm_version} at {sw.rocm_path}",
+                f"ROCm {sw.rocm_version} {_rocm_where(sw)}",
             )
         )
-    elif sw.rocm_path:
+    elif sw.rocm_path or sw.rocm_source:
         checks.append(
             _c(
                 "software.rocm",
                 "ROCm Installation",
                 "software",
                 CheckStatus.WARNING,
-                f"{sw.rocm_path} exists but its version could not be read",
+                f"ROCm found {_rocm_where(sw)}, but its version could not be read",
             )
         )
     else:
@@ -155,8 +162,10 @@ def static_checks(host: HostInfo, hw: HardwareProbe, sw: SoftwareInfo) -> list[C
                 "ROCm Installation",
                 "software",
                 CheckStatus.FAIL,
-                "ROCm not found (checked ROCM_PATH, HIP_PATH and /opt/rocm)",
-                remediation="Install ROCm: https://rocm.docs.amd.com/projects/install-on-linux/en/latest/",
+                "ROCm not found (checked ROCM_PATH, HIP_PATH, rocm-sdk on PATH and /opt/rocm)",
+                remediation="Install ROCm: https://rocm.docs.amd.com/projects/install-on-linux/en/latest/ . "
+                "For ROCm installed with pip (TheRock Python packages), activate that virtual environment "
+                "so `rocm-sdk` is on PATH",
             )
         )
 

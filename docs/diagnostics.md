@@ -44,9 +44,26 @@ on AMD hardware, or that none were.
 | --- | --- | --- |
 | System | OS, kernel, architecture (`system.platform`) | `/etc/os-release`, `uname` |
 | Hardware | GPUs found, `/dev/kfd` and `/dev/dri` access (`hardware.gpu_detected`, `hardware.device_access`) | `amd-smi`, `rocminfo`, `/sys/class/drm` |
-| Software | ROCm install, `rocminfo`, `amdgpu` driver (`software.rocm`, `software.rocminfo`, `software.amdgpu`) | ROCm paths, tool versions, kernel module |
+| Software | ROCm install, `rocminfo`, `amdgpu` driver (`software.rocm`, `software.rocminfo`, `software.amdgpu`) | ROCm location (below), tool versions, kernel module |
 | Runtime | the HIP probe and PyTorch on the GPU (below) | code runs on the device |
 | Compatibility | GPU, OS, kernel, ROCm, driver, HIP, PyTorch (`compat.*`) | the bundled snapshot of AMD's documentation |
+
+### Where ROCm is looked for
+
+`software.rocm` uses the first of these that exists:
+
+1. `ROCM_PATH`, then `HIP_PATH`, when they point at an existing directory.
+2. `rocm-sdk` on PATH: ROCm installed as AMD's TheRock Python packages, for
+   example `pip install "rocm[libraries,devel]"` in a virtual environment.
+   Activate that environment first. KernelVet runs `rocm-sdk version` for the
+   version and lists the `_rocm_sdk_*` package folders to find the libraries.
+   It does not run `rocm-sdk path` or `rocm-sdk init`, because those set up
+   the devel links on first use, and diagnostics never write to your system.
+3. `/opt/rocm`. ROCm 10.x keeps its version in `/opt/rocm/core-X.Y/.info/version`.
+
+A nightly (pre-release) build, such as `10.2.0a20261118` from `rocm-sdk version`,
+gets WARNING in `compat.rocm`, because AMD's compatibility matrix covers
+released versions only.
 
 ### The HIP probe (runtime checks)
 

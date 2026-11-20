@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from kernelvet.compatibility.matrix import CompatibilityMatrix, GpuClass, OsEntry, OsRestriction
 from kernelvet.models.common import CheckResult, CheckStatus, Evidence
 from kernelvet.models.system import GpuDevice, HostInfo, SoftwareInfo
-from kernelvet.utils.versions import major_minor, parse_version, same_release
+from kernelvet.utils.versions import is_prerelease, major_minor, parse_version, same_release
 
 _RANK = {CheckStatus.PASS: 0, CheckStatus.SKIPPED: 1, CheckStatus.WARNING: 2, CheckStatus.FAIL: 3}
 
@@ -343,6 +343,16 @@ def validate_rocm(inp: CompatibilityInput, m: CompatibilityMatrix) -> CheckResul
             CheckStatus.SKIPPED,
             "ROCm installation not detected",
             remediation="Install ROCm: https://rocm.docs.amd.com/projects/install-on-linux/en/latest/",
+        )
+    if is_prerelease(ver):
+        return _check(
+            cid,
+            name,
+            CheckStatus.WARNING,
+            f"ROCm {ver} is a pre-release (nightly) build; this matrix snapshot describes the released "
+            f"ROCm {m.rocm_version}, and AMD's matrix covers releases only",
+            remediation="Install a released ROCm version, or treat the compatibility results as indicative",
+            source=m.cite(m.release_versions_ref, "releases"),
         )
     if same_release(ver, m.rocm_version, depth=3) or same_release(ver, m.rocm_version, depth=2):
         return _check(

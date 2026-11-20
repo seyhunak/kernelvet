@@ -166,9 +166,6 @@ class HostContext:
         kw.setdefault("timeout", self.timeout)
         return self.runner.run(argv, **kw)  # type: ignore[arg-type]
 
-    def rocm_path(self) -> str:
-        return self.env.get("ROCM_PATH") or self.env.get("HIP_PATH") or "/opt/rocm"
-
 
 ProgressCallback = Callable[[str, float], None]
 """Called with (message, fraction 0..1). Used by CLI spinners and TUI workers."""
